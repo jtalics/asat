@@ -1,0 +1,1871 @@
+Newsgroups: comp.sources.misc
+organization: Carnegie-Mellon University, CS/RI
+keywords: amateur radio, space, weather satellites
+subject: v11i020: orbit: track earth satellites
+from: rwb@vi.ri.cmu.edu (Bob Berger)
+Sender: allbery@uunet.UU.NET (Brandon S. Allbery - comp.sources.misc)
+
+Posting-number: Volume 11, Issue 20
+Submitted-by: rwb@vi.ri.cmu.edu (Bob Berger)
+Archive-name: n3emo-orbit/part01
+
+Here's a program to track earth satellites. It's been used by amateur radio
+operators for a few years. It's also useful for weather satellites, the space
+shuttle, etc.
+
+#
+# type    sh orbit.shar   to unpack this archive.
+#
+echo extracting orbit.doc...
+cat >orbit.doc <<'!E!O!F!'
+                           THE N3EMO ORBIT SIMULATOR
+
+                                  VERSION 3.7
+
+                            Robert W. Berger, N3EMO
+
+                                 March 7, 1990
+
+1 Introduction
+  The  N3EMO  orbit  program  simulates  the  motions  of earth satellites. The
+program was written for use by  amateur  radio  operators,  but  is  useful  to
+others,  such  as  astronomers  interested  in observing artificial satellites,
+space enthusiasts tracking shuttle missions, and meteorologists  using  weather
+satellites.  The  program  is distributed in source form in the C language, and
+has been used on a wide variety of computers, from micros to mainframes.
+
+2 Changes
+  The following changes have been made since the last public  release  (version
+2.3):
+
+   - The  internal  calculation  routines  have been rewritten to increase
+     performance, readability, and modularity.  This  facilitates  use  of
+     orbit's routines from other programs.
+
+   - A  new sidereal time reference is generated for each run. This allows
+     the program to maintain its accuracy without  having  to  be  updated
+     every year.
+
+   - Predicted  doppler  shifts  are much more accurate. The instantaneous
+     range-rate is now calculated  directly  instead  of  by  differencing
+     successive  range  samples.  The  doppler  shift displayed is now the
+     correct one for the sample time,  instead  of  an  average  from  the
+     preceding sample interval.
+
+   - Eclipses are optionally reported.
+
+   - Data for 0-180 degree elevation rotators is optionally provided.
+
+   - Satellite names may contain spaces.
+
+   - Single  character  abbreviations are provided for up to 62 satellites
+     (up from 26).
+
+   - A program is provided to convert  NASA  two-line  keplerians  to  the
+     AMSAT format used by the program.
+
+3 Compiling Orbit
+  The  details  of  how  to compile the program vary with the host machine. The
+main program is in orbit.c, and the calculation subroutines  are  in  orbitr.c.
+These  two  files  should  be  compiled  and  linked together to form the orbit
+executable.
+
+4 Data Files
+  Two data files are required to run orbit; a  third  is  optional.  The  first
+required  data  file, called "kepler.dat", contains the database of satellites.
+"kepler.dat" is distributed by the Amateur Satellite Corporation (AMSAT), a non
+profit  organization  that  designs  and operates amateur radio satellites. The
+following is a sample entry from "kepler.dat":
+
+    Satellite: AO-13
+    Catalog number: 19216
+    Epoch time:      90054.30232176
+    Element set:      77
+    Inclination:       57.0658 deg
+    RA of node:       167.4162 deg
+    Eccentricity:    0.6899473
+    Arg of perigee:   221.7453 deg
+    Mean anomaly:      57.5228 deg
+    Mean motion:    2.09701313 rev/day
+    Decay rate:      -9.10e-07 rev/day^2
+    Epoch rev:            1301
+
+  Satellite keplerians are also distributed by NASA in a format called the NASA
+two-line  format.  The  program  in  nasa.c converts a file from NASA format to
+AMSAT format for use with orbit.
+
+  Keplerian sets for various interesting satellites are regularly posted to the
+rec.ham-radio  and  sci.space  usenet  newsgroups.  The  Datalink RBBS at (214)
+394-7438 has keplerians, as well as lots of other information  of  interest  to
+satellite and space enthusiasts.
+
+  The  second  required  data file is a site file which describes the observers
+position and other station related data. Multiple  site  files  are  supported,
+with  each  one  named  after the corresponding observation site. The following
+file is "pgh.sit", a site file for station W3VC in Pittsburgh:
+
+    W3VC  Pittsburgh
+    40.45361                Latitude
+    79.94417                Longitude
+    300                     Height (Meters)
+    0                       Min Elevation (Degrees)
+    Eclipse
+    Flip
+
+  The first five lines are required,  and  give  the  name  of  the  site,  its
+geographic  location,  and  the  minimum  satellite elevation above the horizon
+which is to be considered visible.
+
+  The last two lines contain optional keywords which  enable  features  of  the
+orbit program. "Eclipse" enables reporting of eclipse times for the satellites.
+"Flip"  enables  alternative  bearing/elevations  for  0-180   degree   antenna
+rotators, such as the Kenpro rotators. By offering a choice of two settings for
+any sky position, such rotators allow a satellite to be tracked through a  pass
+without  requiring  the bearing rotor to be reoriented after hitting a rotation
+stop.
+
+  The optional data file, "mode.dat", allows orbit to  provide  scheduling  and
+operation data for a satellite. The following is an example of a "mode.dat":
+
+    Satellite: UO-11
+    Beacon:           145.8260 MHz
+
+    Satellite: AO-13
+    Beacon:           145.8260 MHz
+    Mode: B         from 0 to 165
+    Mode: JL        from 165 to 195
+    Mode: S         from 195 to 200
+    Mode: BS        from 200 to 205
+    Mode: B         from 205 to 256
+
+    Satellite: MIR
+    Beacon:           143.6250 MHz
+
+    Satellite: RS-10/11
+    Beacon:           29.357 MHz
+
+  Mode.dat  may  contain data for multiple satellites. The most common entry is
+"Beacon", which is the frequency orbit uses for calculating doppler shifts.
+
+5 Running Orbit
+  When run, orbit  will  ask  which  satellite  in  "kepler.dat"  you  wish  to
+simulate.    Type  the full satellite name, or the single character next to the
+satellite name. Orbit will then ask for the name of the site. If your site file
+is  "foo.sit",  type  "foo".  Next  enter  the  UTC  date  of  the start of the
+simulation period. Years may be 2 or 4 digits. For example, 1990 may be entered
+as "1990" or simply "90". The UTC hour of the start of the simulation period is
+then entered. Next comes the duration in days, followed  by  the  time  between
+samples  in  minutes.  The  final input is the name of the file for the output;
+hitting the "Return" key places the output on the terminal. Here is  the  start
+of a sample run:
+
+N3EMO Orbit Simulator  v3.7
+Available satellites:
+        a) AO-10
+        b) UO-11
+        c) RS-10/11
+        d) AO-13
+        e) UO-14
+        f) UO-15
+        g) AO-16
+        h) DO-17
+        i) WO-18
+        j) LO-19
+        k) FO-20
+        l) NOAA        n) MET-2/16
+        o) MET-2/17
+        p) MET-3/2
+        q) NOAA-11
+        r) MET-2/18
+        s) MET-3/3
+        t) SALYUT 7
+        u) MIR
+Letter or satellite name :d
+Site name :pgh
+Start date (UTC) (Month Day Year) :3 10 90
+Starting Hour (UTC) :0
+Duration (Days) :1
+Time Step (Minutes) :10
+Output file (RETURN for TTY) :
+AO-13 Element Set 77
+W3VC  Pittsburgh
+
+Doppler calculated for freq = 145.826000 MHz
+Saturday 10 Mar 1990  ----Orbit # 1332-----
+ U.T.C.   Az  El   Az'  El' Doppler Range Height  Lat  Long  Phase(256)
+0120:00  130   1  310  179   -1199  19383  14156  -15    32   24  B
+0130:00  127   6  307  174   -1152  20834  16051  -10    31   28  B
+0140:00  124  10  304  170   -1098  22222  17833   -6    31   32  B   Eclipse
+
+  The  output  contains  a  line  for each sample time at which the satellite's
+elevation above the horizon is equal to or greater  than  the  "Min  Elevation"
+entry  in the site file. The first two columns are the bearing and elevation of
+the satellite from the observer's site. If "Flip"  is  enabled,  the  next  two
+columns are the alternate form of the bearing and elevation, with the elevation
+greater than 90 degrees. The next column is the doppler shift of the satellites
+beacon  frequency, followed by the range from the satellite to the observer, in
+meters, and the satellites height above the earth. Next  is  the  latitude  and
+longitude of the point on earth directly underneath the satellite. The phase is
+then printed, followed by any applicable operating modes  from  the  satellites
+"mode.dat"  entry.  If "Eclipse" is enabled in the site file, and the satellite
+is in the earth's shadow, the word "Eclipse" is printed.
+
+  If the satellite is in a highly elliptical orbit, a separate line is  printed
+for the exact time of the apogee.
+!E!O!F!
+#
+# type    sh /usrvi0/rwb/orbit/orbit.shar   to unpack this archive.
+#
+echo extracting orbit.c...
+cat >orbit.c <<'!E!O!F!'
+/* Copyright (c) 1986,1987,1988,1989,1990 Robert W. Berger N3EMO
+   May be freely distributed, provided this notice remains intact. */
+
+/* Change Log
+	3/7/1990	v3.7 Make Phase III style phase (0-255) the default.
+			Ignore case in satellite names.
+
+	12/19/1989	v3.6 Use more direct calculations for dates.
+			Calculate a new sidereal time reference for each run.
+
+	12/8/1988	v3.5 Allow multiple overlapping modes in "mode.dat".
+
+	6/28/1988	v3.4 Cleaned up Eclipse code. Fixed leap year handling
+			for centesimal years. Added a heuristic to GetDay to
+			allow 2 or 4 digit year specifications.
+				  
+	1/25/1988	v3.2 Rewrote orbitr.c to improve modularity,
+			efficiency, and accuracy. Adopted geocentric
+			cartesian coordinates as the standard representation
+			for position and velocity. Added direct calculation
+			 of range-rate for better doppler predections.
+
+	12/1/1988	v3.1 Allow spaces in satellite names. Provide
+			single character aliases for 62 satellites 
+			(up from 26).
+
+	4/7/87		v3.0 Added eclipses.
+
+	4/1/87		v2.4 Added "Flip" option in site file for
+			0-180 elevation support.
+
+	3/24/87		v2.3 Adapted for new kepler.dat format.
+			Allow beacon frequencies in mode.dat.
+			Use decay rate for drag compensation.
+
+	5/10/86		v2.2 Added single character aliases for satellite
+			names.
+
+	4/30/86		v2.1 Print blank line if satellite dips below
+			horizon and reappears during same orbit and day
+
+	4/29/86		v2.0 Changed GetSatelliteParams() to use AMSAT's
+			"kepler.dat" file. Moved schedule to "mode.dat" file.
+
+        4/22/86         v1.3  Inserted N8FJB's suggestions for variable naming
+                        which maintain 8 character uniqueness.
+                        Also removed "include" file orbitr.h, which had two
+                        definitions of external functions defined in orbit.c
+			    -K3MC 
+
+        4/1/86          v1.2  Corrected a scanf conversion to %d for an int
+                        type.    -K3MC
+ 
+        3/19/86         v1.1  Changed GetSatelliteParams to not pass NULL
+                        to sscanf.
+                                                                        */
+ 
+#define DRAG 1
+
+#include <stdio.h>
+#include <math.h>
+#include <ctype.h>
+ 
+extern double Kepler();
+extern long GetDayNum();
+ 
+#define LC(c) (isupper(c) ? tolower(c) : (c))
+
+#ifndef PI
+#define PI 3.14159265
+#endif
+
+#ifdef PI2
+#undef PI2
+#endif
+
+#define PI2 (PI*2)
+
+#define MinutesPerDay (24*60.0)
+#define SecondsPerDay (60*MinutesPerDay)
+#define HalfSecond (0.5/SecondsPerDay)
+#define EarthRadius 6378.16             /* Kilometers           */
+#define C 2.997925e5                    /* Kilometers/Second    */
+#define TropicalYear 365.24199		/* Mean solar days	*/
+#define EarthEccentricity 0.016713
+#define DegreesPerRadian (180/PI)
+#define RadiansPerDegree (PI/180)
+#define ABS(x) ((x) < 0 ? (-(x)) : (x))
+#define SQR(x) ((x)*(x))
+ 
+#define MaxModes 10
+typedef struct {
+                int MinPhase,MaxPhase;
+                char ModeStr[20];
+               }  ModeRec;
+ 
+char VersionStr[] = "N3EMO Orbit Simulator  v3.7";
+ 
+    /*  Keplerian Elements and misc. data for the satellite              */
+    double  EpochDay;                   /* time of epoch                 */
+    double EpochMeanAnomaly;            /* Mean Anomaly at epoch         */
+    long EpochOrbitNum;                 /* Integer orbit # of epoch      */
+    double EpochRAAN;                   /* RAAN at epoch                 */
+    double epochMeanMotion;             /* Revolutions/day               */
+    double OrbitalDecay;                /* Revolutions/day^2             */
+    double EpochArgPerigee;             /* argument of perigee at epoch  */
+    double Eccentricity;
+    double Inclination;
+    char SatName[100];
+    int ElementSet;
+    double BeaconFreq;                  /* Mhz, used for doppler calc    */
+    double MaxPhase;                    /* Phase units in 1 orbit        */
+    double perigeePhase;
+    int NumModes;
+    ModeRec Modes[MaxModes];
+    int PrintApogee;
+    int PrintEclipses;
+    int Flip;
+ 
+    /* Simulation Parameters */
+ 
+    double StartTime,EndTime, StepTime; /* In Days, 1 = New Year        */
+                                        /*      of reference year       */
+ 
+    /* Site Parameters */
+    char SiteName[100];
+    double SiteLat,SiteLong,SiteAltitude,SiteMinElev;
+ 
+ 
+/* List the satellites in kepler.dat, and return the number found */
+ListSatellites()
+{
+    char str[100];
+    FILE *InFile;
+    char satchar;
+    int NumSatellites;
+
+    printf("Available satellites:\n");
+
+    if ((InFile = fopen("kepler.dat","r")) == 0)
+        {
+	printf("\"kepler.dat\" not found\n");
+	exit(-1);
+	}
+
+    satchar = 'a';
+    NumSatellites = 0;
+    while (fgets(str,100,InFile))
+	if (strncmp(str,"Satellite: ",11) == 0)
+	    {
+	    printf("	%c) %s",satchar,&str[11]);
+	    if (satchar == 'z')
+		satchar = 'A';
+               else if (satchar == 'Z')
+		   satchar = '0';
+    	        else satchar++;
+	    NumSatellites++;
+	    }
+
+    fclose(InFile);
+
+    return NumSatellites;
+}
+
+/* Match and skip over a string in the input file. Exits on failure. */
+
+MatchStr(InFile,FileName,Target)
+FILE *InFile;
+char *FileName,*Target;
+{
+    char str[100];
+
+    fgets(str,strlen(Target)+1,InFile);
+    if (strcmp(Target,str))
+       {
+       printf("%s: found \"%s\" while expecting \"%s\n\"",FileName,str,Target);
+       exit(-1);
+       }
+}
+
+LetterNum(c)
+char c;
+{
+    if (c >= 'a' && c <= 'z')
+	return c - 'a' + 1;
+      else if (c >= 'A' && c <= 'Z')
+ 	  return c - 'A'+ 27;
+	else if (c >= '0' && c <= '9')
+	  return c - '0' + 53;
+}
+      
+/* Case insensitive strncmp */
+cstrncmp(str1,str2,l)
+char *str1,*str2;
+{
+    int i;
+
+    for (i = 0; i < l; i++)
+	if (LC(str1[i]) != LC(str2[i]))
+	    return 1;
+
+    return 0;
+}
+
+
+cstrcmp(str1,str2)
+char *str1,*str2;
+{
+    int i,l;
+
+    l = strlen(str1);
+    if (strlen(str2) != l)
+	return 1;
+
+    for (i = 0; i < l; i++)
+	if (LC(str1[i]) != LC(str2[i]))
+	    return 1;
+
+    return 0;
+}
+
+
+GetSatelliteParams()
+{
+    FILE *InFile;
+    char str[100];
+    int EpochYear;
+    double EpochHour,EpochMinute,EpochSecond;
+    int found;
+    int i,NumSatellites;
+    char satchar;
+
+    NumSatellites = ListSatellites();
+
+    found = 0;
+
+    while (!found)
+	{
+	printf("Letter or satellite name :");
+	gets(SatName);
+
+	if ((InFile = fopen("kepler.dat","r")) == 0)
+	    {
+	    printf("kepler.dat not found\n");
+	    exit(-1);
+	    }
+
+	if (strlen(SatName) == 1)
+	    {			/* use single character label */
+	    satchar = SatName[0];
+	    if (LetterNum(satchar) > NumSatellites)
+	        {
+	    	printf("'%c' is out of range\n",satchar);
+		fclose(InFile);
+		continue;
+		}
+
+	    for (i = 1; i <= LetterNum(satchar); i++)
+		{
+		do  /* find line beginning with "Satellite: " */
+		    fgets(str,100,InFile);
+		while (strncmp(str,"Satellite: ",11) != 0);
+		}
+	    found = 1;
+	    strncpy(SatName,&str[11],strlen(str)-12);
+	    }
+		
+	 else 
+	     {
+	     while (!found)  /* use satellite name */
+            	{
+	    	if (! fgets(str,100,InFile))
+	    	    break;	/* EOF */
+
+	    	if (strncmp(str,"Satellite: ",11) == 0)
+		   if (cstrncmp(SatName,&str[11],strlen(SatName)) == 0)
+			found = 1;
+	        }
+
+	    if (!found)
+		{
+		printf("Satellite %s not found\n",SatName);
+		fclose(InFile);
+		}
+	    }
+	}
+
+    BeaconFreq = 146.0;  /* Default value */
+
+    fgets(str,100,InFile);	/* Skip line */
+
+    MatchStr(InFile,"kepler.dat","Epoch time:");
+    fgets(str,100,InFile);
+    sscanf(str,"%lf",&EpochDay);
+
+    EpochYear = EpochDay / 1000.0;
+    EpochDay -= EpochYear*1000.0;
+    EpochDay += GetDayNum(EpochYear,1,0);
+    fgets(str,100,InFile);
+
+    if (sscanf(str,"Element set: %ld",&ElementSet) == 0)
+       {   /* Old style kepler.dat */
+       MatchStr(InFile,"kepler.dat","Element set:");
+       fgets(str,100,InFile);
+       sscanf(str,"%d",&ElementSet);
+       }
+
+    MatchStr(InFile,"kepler.dat","Inclination:");
+    fgets(str,100,InFile);
+    sscanf(str,"%lf",&Inclination);
+    Inclination *= RadiansPerDegree;
+
+    MatchStr(InFile,"kepler.dat","RA of node:");
+    fgets(str,100,InFile);
+    sscanf(str,"%lf",&EpochRAAN);
+    EpochRAAN *= RadiansPerDegree;
+
+    MatchStr(InFile,"kepler.dat","Eccentricity:");
+    fgets(str,100,InFile);
+    sscanf(str,"%lf",&Eccentricity);
+
+    MatchStr(InFile,"kepler.dat","Arg of perigee:");
+    fgets(str,100,InFile);
+    sscanf(str,"%lf",&EpochArgPerigee);
+    EpochArgPerigee *= RadiansPerDegree;
+
+    MatchStr(InFile,"kepler.dat","Mean anomaly:");
+    fgets(str,100,InFile);
+    sscanf(str,"%lf",&EpochMeanAnomaly);
+    EpochMeanAnomaly *= RadiansPerDegree;
+
+    MatchStr(InFile,"kepler.dat","Mean motion:");
+    fgets(str,100,InFile);
+    sscanf(str,"%lf",&epochMeanMotion);
+
+    MatchStr(InFile,"kepler.dat","Decay rate:");
+    fgets(str,100,InFile);
+    sscanf(str,"%lf",&OrbitalDecay);
+
+    MatchStr(InFile,"kepler.dat","Epoch rev:");
+    fgets(str,100,InFile);
+    sscanf(str,"%ld",&EpochOrbitNum);
+
+	while (1)
+	    {
+	    if (! fgets(str,100,InFile))
+		break;	/* EOF */
+	    if (strlen(str) <= 2)
+	    	break;  /* Blank line */
+	    sscanf(str,"Beacon: %lf",&BeaconFreq);
+	    }
+
+    PrintApogee = (Eccentricity >= 0.3);
+
+    perigeePhase = 0; MaxPhase = 256; /* Default values */
+    NumModes = 0;
+
+    if ((InFile = fopen("mode.dat","r")) == 0)
+	return;
+
+    found = 0;
+    while (!found)
+        {
+	if (! fgets(str,100,InFile))
+	    break;	/* EOF */
+	if (sscanf(str,"Satellite: %s",str) == 1
+	    && cstrcmp(SatName,str) == 0)
+		found = 1;
+	}
+	
+    if (found)
+	{
+	while (1)
+	    {
+	    if (! fgets(str,100,InFile))
+		break;	/* EOF */
+	    if (strlen(str) <= 2)
+	    	break;  /* Blank line */
+	    sscanf(str,"Beacon: %lf",&BeaconFreq);
+	    sscanf(str,"Perigee phase: %lf",&perigeePhase);
+	    sscanf(str,"Max phase: %lf",&MaxPhase);
+
+	    if (sscanf(str,"Mode: %20s from %d to %d",Modes[NumModes].ModeStr,
+	    &Modes[NumModes].MinPhase,&Modes[NumModes].MaxPhase) == 3
+	      && NumModes < MaxModes)
+		  NumModes++;
+	    }
+	fclose(InFile);
+	}
+}
+
+ 
+GetSiteParams()
+{
+    FILE *InFile;
+    char name[100],str[100];
+ 
+    printf("Site name :");
+    gets(name);
+    strcat(name,".sit");
+ 
+    if ((InFile = fopen(name,"r")) == 0)
+        {
+        printf("%s not found\n",name);
+        exit(-1);
+        }
+ 
+    fgets(SiteName,100,InFile);
+ 
+    fgets(str,100,InFile);
+    sscanf(str,"%lf",&SiteLat);
+    SiteLat *= RadiansPerDegree;
+ 
+    fgets(str,100,InFile);
+    sscanf(str,"%lf",&SiteLong);
+    SiteLong *= RadiansPerDegree;
+ 
+    fgets(str,100,InFile);
+    sscanf(str,"%lf",&SiteAltitude);
+    SiteAltitude /= 1000;   /* convert to km */
+ 
+    fgets(str,100,InFile);
+    sscanf(str,"%lf",&SiteMinElev);
+    SiteMinElev *= RadiansPerDegree;
+
+    Flip = PrintEclipses = 0;
+    while (fgets(str,100,InFile))
+	{
+	if (strncmp(str,"Flip",4) == 0)
+	    Flip = 1;
+	  else if (strncmp(str,"Eclipse",7) == 0)
+	    PrintEclipses = 1;
+	   else printf("\"%s\" unknown option: %s",name,str);
+	}
+}
+ 
+GetSimulationParams()
+{
+    double hour,duration;
+    int Month,Day,Year;
+ 
+    printf("Start date (UTC) (Month Day Year) :");
+    scanf("%d%d%d",&Month,&Day,&Year);
+ 
+    StartTime = GetDayNum(Year,Month,Day);
+    printf("Starting Hour (UTC) :");
+    scanf("%lf",&hour);
+    StartTime += hour/24;
+ 
+    printf("Duration (Days) :");
+    scanf("%lf",&duration);
+    EndTime = StartTime + duration;
+ 
+    printf("Time Step (Minutes) :");
+    scanf("%lf",&StepTime);
+    StepTime /= MinutesPerDay;
+}
+ 
+PrintMode(OutFile,Phase)
+FILE *OutFile;
+{
+    int CurMode;
+ 
+    for (CurMode = 0; CurMode < NumModes; CurMode++)
+        if ((Phase >= Modes[CurMode].MinPhase
+                && Phase < Modes[CurMode].MaxPhase)
+              || ((Modes[CurMode].MinPhase > Modes[CurMode].MaxPhase)
+                  && (Phase >= Modes[CurMode].MinPhase
+                        || Phase < Modes[CurMode].MaxPhase)))
+            {
+            fprintf(OutFile,"%s ",Modes[CurMode].ModeStr);
+            }
+}
+ 
+ 
+main()
+{
+    double ReferenceOrbit;      /* Floating point orbit # at epoch */
+    double CurrentTime;         /* In Days                         */
+    double CurrentOrbit;
+    double AverageMotion,       /* Corrected for drag              */
+        CurrentMotion;
+    double MeanAnomaly,TrueAnomaly;
+    double SemiMajorAxis;
+    double Radius;              /* From geocenter                  */
+    double SatX,SatY,SatZ;	/* In Right Ascension based system */
+    double SatVX,SatVY,SatVZ;   /* Kilometers/second		   */
+    double SiteX,SiteY,SiteZ;
+    double SiteVX,SiteVY;
+    double SiteMatrix[3][3];
+    double Height;
+    double RAANPrecession,PerigeePrecession;
+    double SSPLat,SSPLong;
+    long OrbitNum,PrevOrbitNum;
+    long Day,PrevDay;
+    double Azimuth,Elevation,Range;
+    double RangeRate,Doppler;
+    int Phase;
+    char FileName[100];
+    FILE *OutFile;
+    int DidApogee;
+    double TmpTime,PrevTime;
+    int PrevVisible;
+
+    printf("%s\n",VersionStr);
+ 
+
+    GetSatelliteParams();
+    GetSiteParams();
+    GetSimulationParams();
+ 
+    InitOrbitRoutines((StartTime+EndTime)/2);
+
+    printf("Output file (RETURN for TTY) :");
+    gets(FileName);     /* Skip previous RETURN */
+    gets(FileName);
+ 
+ 
+    if (strlen(FileName) > 0)
+        {
+        if ((OutFile = fopen(FileName,"w")) == 0)
+            {
+            printf("Can't write to %s\n",FileName);
+            exit(-1);
+            }
+        }
+      else OutFile = stdout;
+ 
+    fprintf(OutFile,"%s Element Set %d\n",SatName,ElementSet);
+
+    fprintf(OutFile,"%s\n",SiteName);
+ 
+    fprintf(OutFile,"Doppler calculated for freq = %lf MHz\n",BeaconFreq);
+ 
+    SemiMajorAxis = 331.25 * exp(2*log(MinutesPerDay/epochMeanMotion)/3);
+    GetPrecession(SemiMajorAxis,Eccentricity,Inclination,&RAANPrecession,
+                        &PerigeePrecession);
+
+    ReferenceOrbit = EpochMeanAnomaly/PI2 + EpochOrbitNum;
+ 
+    PrevDay = -10000; PrevOrbitNum = -10000;
+    PrevTime = StartTime-2*StepTime;
+ 
+    BeaconFreq *= 1E6;          /* Convert to Hz */
+ 
+    DidApogee = 0;
+ 
+    for (CurrentTime = StartTime; CurrentTime <= EndTime;
+                CurrentTime += StepTime)
+        {
+ 
+        AverageMotion = epochMeanMotion
+	   + (CurrentTime-EpochDay)*OrbitalDecay/2;
+        CurrentMotion = epochMeanMotion
+	   + (CurrentTime-EpochDay)*OrbitalDecay;
+
+        SemiMajorAxis = 331.25 * exp(2*log(MinutesPerDay/CurrentMotion)/3);
+ 
+        CurrentOrbit = ReferenceOrbit +
+                        (CurrentTime-EpochDay)*AverageMotion;
+        OrbitNum = CurrentOrbit;
+ 
+        MeanAnomaly = (CurrentOrbit-OrbitNum)*PI2;
+ 
+        TmpTime = CurrentTime;
+        if (MeanAnomaly < PI)
+            DidApogee = 0;
+        if (PrintApogee && !DidApogee && MeanAnomaly > PI)
+            {                   /* Calculate Apogee */
+            TmpTime -= StepTime;   /* So we pick up later where we left off */
+            MeanAnomaly = PI;
+            CurrentTime=EpochDay+(OrbitNum-ReferenceOrbit+0.5)/AverageMotion;
+            }
+ 
+        TrueAnomaly = Kepler(MeanAnomaly,Eccentricity);
+
+	GetSatPosition(EpochDay,EpochRAAN,EpochArgPerigee,SemiMajorAxis,
+	    Inclination,Eccentricity,RAANPrecession,PerigeePrecession,
+	    CurrentTime,TrueAnomaly,&SatX,&SatY,&SatZ,&Radius,
+	    &SatVX,&SatVY,&SatVZ);
+
+	GetSitPosition(SiteLat,SiteLong,SiteAltitude,CurrentTime,
+		&SiteX,&SiteY,&SiteZ,&SiteVX,&SiteVY,SiteMatrix);
+
+
+	GetBearings(SatX,SatY,SatZ,SiteX,SiteY,SiteZ,SiteMatrix,
+		&Azimuth,&Elevation);
+
+ 
+        if (Elevation >= SiteMinElev && CurrentTime >= StartTime)
+            {
+
+            Day = CurrentTime + HalfSecond;
+            if (((double) Day) > CurrentTime+HalfSecond)
+                Day -= 1;    /* Correct for truncation of negative values */
+
+	    if (OrbitNum == PrevOrbitNum && Day == PrevDay && !PrevVisible)
+	    	fprintf(OutFile,"\n");	/* Dipped out of sight; print blank */
+
+            if (OrbitNum != PrevOrbitNum || Day != PrevDay)
+                {                       /* Print Header */
+		PrintDayOfWeek(OutFile,(long) Day);
+		fprintf(OutFile," ");
+                PrintDate(OutFile,(long) Day);
+                fprintf(OutFile,"  ----Orbit # %ld-----\n",OrbitNum);
+                fprintf(OutFile," U.T.C.   Az  El  ");
+		if (Flip)
+                    fprintf(OutFile," Az'  El' ");
+
+		fprintf(OutFile,"Doppler Range");
+                fprintf(OutFile," Height  Lat  Long  Phase(%3.0lf)\n",
+                                MaxPhase);
+                }
+            PrevOrbitNum = OrbitNum; PrevDay = Day;
+            PrintTime(OutFile,CurrentTime + HalfSecond);
+ 
+            fprintf(OutFile,"  %3.0lf %3.0lf",Azimuth*DegreesPerRadian,
+                Elevation*DegreesPerRadian);
+	    if (Flip)
+		{
+		Azimuth += PI;
+		if (Azimuth >= PI2)
+		    Azimuth -= PI2;
+		Elevation = PI-Elevation;
+		fprintf(OutFile,"  %3.0lf  %3.0lf",Azimuth*DegreesPerRadian,
+			Elevation*DegreesPerRadian);
+		}
+
+  	    GetRange(SiteX,SiteY,SiteZ,SiteVX,SiteVY,
+		SatX,SatY,SatZ,SatVX,SatVY,SatVZ,&Range,&RangeRate);
+            Doppler = -BeaconFreq*RangeRate/C;
+            fprintf(OutFile,"  %6.0lf %6.0lf",Doppler,Range);
+ 
+	    GetSubSatPoint(SatX,SatY,SatZ,CurrentTime,
+	        &SSPLat,&SSPLong,&Height);
+            fprintf(OutFile," %6.0lf  %3.0lf  %4.0lf",
+                Height,SSPLat*DegreesPerRadian,
+                SSPLong*DegreesPerRadian);
+ 
+            Phase = (MeanAnomaly/PI2*MaxPhase + perigeePhase);
+            while (Phase < 0)
+                Phase += MaxPhase;
+            while (Phase >= MaxPhase)
+                Phase -= MaxPhase;
+ 
+            fprintf(OutFile," %4d  ", Phase);
+            PrintMode(OutFile,Phase);
+
+            if (PrintApogee && (MeanAnomaly == PI))
+                fprintf(OutFile,"    Apogee");
+
+	    if (PrintEclipses)
+		if (Eclipsed(SatX,SatY,SatZ,Radius,CurrentTime))
+		    fprintf(OutFile,"  Eclipse");
+
+            fprintf(OutFile,"\n");
+	    PrevVisible = 1;
+            }
+	 else
+	    PrevVisible = 0;	
+        if (PrintApogee && (MeanAnomaly == PI))
+            DidApogee = 1;
+
+
+        PrevTime = CurrentTime;
+        CurrentTime = TmpTime;
+        }
+    fclose(OutFile);
+}
+!E!O!F!
+#
+# type    sh /usrvi0/rwb/orbit/orbit.shar   to unpack this archive.
+#
+echo extracting orbitr.c...
+cat >orbitr.c <<'!E!O!F!'
+/* N3EMO Orbit Simulator routines  v3.7 */
+
+/* Copyright (c) 1986,1987,1988,1989,1990 Robert W. Berger N3EMO
+   May be freely distributed, provided this notice remains intact. */
+
+#include <stdio.h>
+#include <math.h>
+ 
+#define SSPELLIPSE 0		/* If non zero, use ellipsoidal earth model
+				   when calculating longitude, latitude, and
+				   height */
+
+#ifndef PI
+#define PI 3.14159265
+#endif
+
+#ifdef PI2
+#undef PI2
+#endif
+
+#ifdef E
+#undef E
+#endif
+
+typedef double mat3x3[3][3];
+
+#define PI2 (PI*2)
+#define MinutesPerDay (24*60.0)
+#define SecondsPerDay (60*MinutesPerDay)
+#define HalfSecond (0.5/SecondsPerDay)
+#define EarthRadius 6378.16             /* Kilometers, at equator */
+
+#define EarthFlat (1/298.25)            /* Earth Flattening Coeff. */
+#define SiderealSolar 1.0027379093
+#define SidRate (PI2*SiderealSolar/SecondsPerDay)	/* radians/second */
+#define GM 398600			/* Kilometers^3/seconds^2 */
+#define DegreesPerRadian (180/PI)
+#define RadiansPerDegree (PI/180)
+#define ABS(x) ((x) < 0 ? (-(x)) : (x))
+#define SQR(x) ((x)*(x))
+ 
+#define Epsilon (RadiansPerDegree/3600)     /* 1 arc second */
+#define SunRadius 695000		
+#define SunSemiMajorAxis  149598845.0  	    /* Kilometers 		   */
+
+
+double SidDay,SidReference;	/* Date and sidereal time	*/
+
+/* Keplerian elements for the sun */
+double SunEpochTime,SunInclination,SunRAAN,SunEccentricity,
+       SunArgPerigee,SunMeanAnomaly,SunMeanMotion;
+
+/* values for shadow geometry */
+double SinPenumbra,CosPenumbra;
+
+ 
+/* Solve Kepler's equation                                      */
+/* Inputs:                                                      */
+/*      MeanAnomaly     Time Since last perigee, in radians.    */
+/*                      PI2 = one complete orbit.               */
+/*      Eccentricity    Eccentricity of orbit's ellipse.        */
+/* Output:                                                      */
+/*      TrueAnomaly     Angle between perigee, geocenter, and   */
+/*                      current position.                       */
+ 
+long calls = 0;
+long iters = 0;
+
+dumpstats()
+{
+printf("Average iterations = %lf\n",((double) iters)/calls);
+}
+
+double Kepler(MeanAnomaly,Eccentricity)
+register double MeanAnomaly,Eccentricity;
+ 
+{
+register double E;              /* Eccentric Anomaly                    */
+register double Error;
+register double TrueAnomaly;
+ 
+calls++;
+
+    E = MeanAnomaly ;/*+ Eccentricity*sin(MeanAnomaly);   /* Initial guess */
+    do
+        {
+        Error = (E - Eccentricity*sin(E) - MeanAnomaly)
+                / (1 - Eccentricity*cos(E));
+        E -= Error;
+iters++;
+        }
+   while (ABS(Error) >= Epsilon);
+
+    if (ABS(E-PI) < Epsilon)
+        TrueAnomaly = PI;
+      else
+        TrueAnomaly = 2*atan(sqrt((1+Eccentricity)/(1-Eccentricity))
+                                *tan(E/2));
+    if (TrueAnomaly < 0)
+        TrueAnomaly += PI2;
+ 
+    return TrueAnomaly;
+}
+ 
+GetSubSatPoint(SatX,SatY,SatZ,Time,Latitude,Longitude,Height)
+double SatX,SatY,SatZ,Time;
+double *Latitude,*Longitude,*Height;
+{
+    double r;
+    long i;
+
+    r = sqrt(SQR(SatX) + SQR(SatY) + SQR(SatZ));
+
+    *Longitude = PI2*((Time-SidDay)*SiderealSolar + SidReference)
+		    - atan2(SatY,SatX);
+
+    /* i = floor(Longitude/2*pi)        */
+    i = *Longitude/PI2;
+    if(i < 0)
+        i--;
+ 
+    *Longitude -= i*PI2;
+
+    *Latitude = atan(SatZ/sqrt(SQR(SatX) + SQR(SatY)));
+
+#if SSPELLIPSE
+#else
+    *Height = r - EarthRadius;
+#endif
+}
+ 
+ 
+GetPrecession(SemiMajorAxis,Eccentricity,Inclination,
+        RAANPrecession,PerigeePrecession)
+double SemiMajorAxis,Eccentricity,Inclination;
+double *RAANPrecession,*PerigeePrecession;
+{
+  *RAANPrecession = 9.95*pow(EarthRadius/SemiMajorAxis,3.5) * cos(Inclination)
+                 / SQR(1-SQR(Eccentricity)) * RadiansPerDegree;
+ 
+  *PerigeePrecession = 4.97*pow(EarthRadius/SemiMajorAxis,3.5)
+         * (5*SQR(cos(Inclination))-1)
+                 / SQR(1-SQR(Eccentricity)) * RadiansPerDegree;
+}
+ 
+/* Compute the satellite postion and velocity in the RA based coordinate
+   system */
+
+GetSatPosition(EpochTime,EpochRAAN,EpochArgPerigee,SemiMajorAxis,
+	Inclination,Eccentricity,RAANPrecession,PerigeePrecession,
+	Time,TrueAnomaly,X,Y,Z,Radius,VX,VY,VZ)
+ 
+double EpochTime,EpochRAAN,EpochArgPerigee;
+double SemiMajorAxis,Inclination,Eccentricity;
+double RAANPrecession,PerigeePrecession,Time, TrueAnomaly;
+double *X,*Y,*Z,*Radius,*VX,*VY,*VZ;
+
+{
+    double RAAN,ArgPerigee;
+ 
+
+    double Xw,Yw,VXw,VYw;	/* In orbital plane */
+    double Tmp;
+    double Px,Qx,Py,Qy,Pz,Qz;	/* Escobal transformation 31 */
+    double CosArgPerigee,SinArgPerigee;
+    double CosRAAN,SinRAAN,CoSinclination,SinInclination;
+
+        *Radius = SemiMajorAxis*(1-SQR(Eccentricity))
+                        / (1+Eccentricity*cos(TrueAnomaly));
+
+
+    Xw = *Radius * cos(TrueAnomaly);
+    Yw = *Radius * sin(TrueAnomaly);
+    
+    Tmp = sqrt(GM/(SemiMajorAxis*(1-SQR(Eccentricity))));
+
+    VXw = -Tmp*sin(TrueAnomaly);
+    VYw = Tmp*(cos(TrueAnomaly) + Eccentricity);
+
+    ArgPerigee = EpochArgPerigee + (Time-EpochTime)*PerigeePrecession;
+    RAAN = EpochRAAN - (Time-EpochTime)*RAANPrecession;
+
+    CosRAAN = cos(RAAN); SinRAAN = sin(RAAN);
+    CosArgPerigee = cos(ArgPerigee); SinArgPerigee = sin(ArgPerigee);
+    CoSinclination = cos(Inclination); SinInclination = sin(Inclination);
+    
+    Px = CosArgPerigee*CosRAAN - SinArgPerigee*SinRAAN*CoSinclination;
+    Py = CosArgPerigee*SinRAAN + SinArgPerigee*CosRAAN*CoSinclination;
+    Pz = SinArgPerigee*SinInclination;
+    Qx = -SinArgPerigee*CosRAAN - CosArgPerigee*SinRAAN*CoSinclination;
+    Qy = -SinArgPerigee*SinRAAN + CosArgPerigee*CosRAAN*CoSinclination;
+    Qz = CosArgPerigee*SinInclination;
+
+    *X = Px*Xw + Qx*Yw;		/* Escobal, transformation #31 */
+    *Y = Py*Xw + Qy*Yw;
+    *Z = Pz*Xw + Qz*Yw;
+
+    *VX = Px*VXw + Qx*VYw;
+    *VY = Py*VXw + Qy*VYw;
+    *VZ = Pz*VXw + Qz*VYw;
+}
+
+/* Compute the site postion and velocity in the RA based coordinate
+   system. SiteMatrix is set to a matrix which is used by GetTopoCentric
+   to convert geocentric coordinates to topocentric (observer-centered)
+    coordinates. */
+
+GetSitPosition(SiteLat,SiteLong,SiteElevation,CurrentTime,
+             SiteX,SiteY,SiteZ,SiteVX,SiteVY,SiteMatrix)
+
+double SiteLat,SiteLong,SiteElevation,CurrentTime;
+double *SiteX,*SiteY,*SiteZ,*SiteVX,*SiteVY;
+mat3x3 SiteMatrix;
+
+{
+    static double G1,G2; /* Used to correct for flattening of the Earth */
+    static double CosLat,SinLat;
+    static double OldSiteLat = -100000;  /* Used to avoid unneccesary recomputation */
+    static double OldSiteElevation = -100000;
+    double Lat;
+    double SiteRA;	/* Right Ascension of site			*/
+    double CosRA,SinRA;
+
+    if ((SiteLat != OldSiteLat) || (SiteElevation != OldSiteElevation))
+	{
+	OldSiteLat = SiteLat;
+	OldSiteElevation = SiteElevation;
+	Lat = atan(1/(1-SQR(EarthFlat))*tan(SiteLat));
+
+	CosLat = cos(Lat);
+	SinLat = sin(Lat);
+
+	G1 = EarthRadius/(sqrt(1-(2*EarthFlat-SQR(EarthFlat))*SQR(SinLat)));
+	G2 = G1*SQR(1-EarthFlat);
+	G1 += SiteElevation;
+	G2 += SiteElevation;
+	}
+
+
+    SiteRA = PI2*((CurrentTime-SidDay)*SiderealSolar + SidReference)
+	         - SiteLong;
+    CosRA = cos(SiteRA);
+    SinRA = sin(SiteRA);
+    
+
+    *SiteX = G1*CosLat*CosRA;
+    *SiteY = G1*CosLat*SinRA;
+    *SiteZ = G2*SinLat;
+    *SiteVX = -SidRate * *SiteY;
+    *SiteVY = SidRate * *SiteX;
+
+    SiteMatrix[0][0] = SinLat*CosRA;
+    SiteMatrix[0][1] = SinLat*SinRA;
+    SiteMatrix[0][2] = -CosLat;
+    SiteMatrix[1][0] = -SinRA;
+    SiteMatrix[1][1] = CosRA;
+    SiteMatrix[1][2] = 0.0;
+    SiteMatrix[2][0] = CosRA*CosLat;
+    SiteMatrix[2][1] = SinRA*CosLat;
+    SiteMatrix[2][2] = SinLat;
+}
+
+GetRange(SiteX,SiteY,SiteZ,SiteVX,SiteVY,
+	SatX,SatY,SatZ,SatVX,SatVY,SatVZ,Range,RangeRate)
+
+double SiteX,SiteY,SiteZ,SiteVX,SiteVY;
+double SatX,SatY,SatZ,SatVX,SatVY,SatVZ;
+double *Range,*RangeRate;
+{
+    double DX,DY,DZ;
+
+    DX = SatX - SiteX; DY = SatY - SiteY; DZ = SatZ - SiteZ;
+
+    *Range = sqrt(SQR(DX)+SQR(DY)+SQR(DZ));    
+
+    *RangeRate = ((SatVX-SiteVX)*DX + (SatVY-SiteVY)*DY + SatVZ*DZ)
+			/ *Range;
+}
+
+/* Convert from geocentric RA based coordinates to topocentric
+   (observer centered) coordinates */
+
+GetTopocentric(SatX,SatY,SatZ,SiteX,SiteY,SiteZ,SiteMatrix,X,Y,Z)
+double SatX,SatY,SatZ,SiteX,SiteY,SiteZ;
+double *X,*Y,*Z;
+mat3x3 SiteMatrix;
+{
+    SatX -= SiteX;
+    SatY -= SiteY;
+    SatZ -= SiteZ;
+
+    *X = SiteMatrix[0][0]*SatX + SiteMatrix[0][1]*SatY
+	+ SiteMatrix[0][2]*SatZ; 
+    *Y = SiteMatrix[1][0]*SatX + SiteMatrix[1][1]*SatY
+	+ SiteMatrix[1][2]*SatZ; 
+    *Z = SiteMatrix[2][0]*SatX + SiteMatrix[2][1]*SatY
+	+ SiteMatrix[2][2]*SatZ; 
+}
+
+GetBearings(SatX,SatY,SatZ,SiteX,SiteY,SiteZ,SiteMatrix,Azimuth,Elevation)
+double SatX,SatY,SatZ,SiteX,SiteY,SiteZ;
+mat3x3 SiteMatrix;
+double *Azimuth,*Elevation;
+{
+    double x,y,z;
+
+    GetTopocentric(SatX,SatY,SatZ,SiteX,SiteY,SiteZ,SiteMatrix,&x,&y,&z);
+
+    *Elevation = atan(z/sqrt(SQR(x) + SQR(y)));
+
+    *Azimuth = PI - atan2(y,x);
+
+    if (*Azimuth < 0)
+	*Azimuth += PI;
+}
+
+Eclipsed(SatX,SatY,SatZ,SatRadius,CurrentTime)
+double SatX,SatY,SatZ,SatRadius,CurrentTime;
+{
+    double MeanAnomaly,TrueAnomaly;
+    double SunX,SunY,SunZ,SunRad;
+    double vx,vy,vz;
+    double CosTheta;
+
+    MeanAnomaly = SunMeanAnomaly+ (CurrentTime-SunEpochTime)*SunMeanMotion*PI2;
+    TrueAnomaly = Kepler(MeanAnomaly,SunEccentricity);
+
+    GetSatPosition(SunEpochTime,SunRAAN,SunArgPerigee,SunSemiMajorAxis,
+		SunInclination,SunEccentricity,0.0,0.0,CurrentTime,
+		TrueAnomaly,&SunX,&SunY,&SunZ,&SunRad,&vx,&vy,&vz);
+
+    CosTheta = (SunX*SatX + SunY*SatY + SunZ*SatZ)/(SunRad*SatRadius)
+		 *CosPenumbra + (SatRadius/EarthRadius)*SinPenumbra;
+
+    if (CosTheta < 0)
+        if (CosTheta < -sqrt(SQR(SatRadius)-SQR(EarthRadius))/SatRadius
+	    		*CosPenumbra + (SatRadius/EarthRadius)*SinPenumbra)
+	  
+	    return 1;
+    return 0;
+}
+
+/* Initialize the Sun's keplerian elements for a given epoch.
+   Formulas are from "Explanatory Supplement to the Astronomical Ephemeris".
+   Also init the sidereal reference				*/
+
+InitOrbitRoutines(EpochDay)
+double EpochDay;
+{
+    double T,T2,T3,Omega;
+    int n;
+    double SunTrueAnomaly,SunDistance;
+
+    T = (floor(EpochDay)-0.5)/36525;
+    T2 = T*T;
+    T3 = T2*T;
+
+    SidDay = floor(EpochDay);
+
+    SidReference = (6.6460656 + 2400.051262*T + 0.00002581*T2)/24;
+    SidReference -= floor(SidReference);
+
+    /* Omega is used to correct for the nutation and the abberation */
+    Omega = (259.18 - 1934.142*T) * RadiansPerDegree;
+    n = Omega / PI2;
+    Omega -= n*PI2;
+
+    SunEpochTime = EpochDay;
+    SunRAAN = 0;
+
+    SunInclination = (23.452294 - 0.0130125*T - 0.00000164*T2
+		    + 0.000000503*T3 +0.00256*cos(Omega)) * RadiansPerDegree;
+    SunEccentricity = (0.01675104 - 0.00004180*T - 0.000000126*T2);
+    SunArgPerigee = (281.220833 + 1.719175*T + 0.0004527*T2
+			+ 0.0000033*T3) * RadiansPerDegree;
+    SunMeanAnomaly = (358.475845 + 35999.04975*T - 0.00015*T2
+			- 0.00000333333*T3) * RadiansPerDegree;
+    n = SunMeanAnomaly / PI2;
+    SunMeanAnomaly -= n*PI2;
+
+    SunMeanMotion = 1/(365.24219879 - 0.00000614*T);
+
+    SunTrueAnomaly = Kepler(SunMeanAnomaly,SunEccentricity);
+    SunDistance = SunSemiMajorAxis*(1-SQR(SunEccentricity))
+			/ (1+SunEccentricity*cos(SunTrueAnomaly));
+
+    SinPenumbra = (SunRadius-EarthRadius)/SunDistance;
+    CosPenumbra = sqrt(1-SQR(SinPenumbra));
+}
+
+ 
+SPrintTime(Str,Time)
+char *Str;
+double Time;
+{
+    int day,hours,minutes,seconds;
+ 
+    day = Time;
+    Time -= day;
+    if (Time < 0)
+        Time += 1.0;   /* Correct for truncation problems with negatives */
+ 
+    hours = Time*24;
+    Time -=  hours/24.0;
+ 
+    minutes = Time*MinutesPerDay;
+    Time -= minutes/MinutesPerDay;
+ 
+    seconds = Time*SecondsPerDay;
+    seconds -= seconds/SecondsPerDay;
+ 
+    sprintf(Str,"%02d%02d:%02d",hours,minutes,seconds);
+}
+ 
+PrintTime(OutFile,Time)
+FILE *OutFile;
+double Time;
+{
+    char str[100];
+
+    SPrintTime(str,Time);
+    fprintf(OutFile,"%s",str);
+}
+
+
+/* Get the Day Number for a given date. January 1 of the reference year
+   is day 0. Note that the Day Number may be negative, if the sidereal
+   reference is in the future.                                          */
+ 
+/* Date calculation routines
+  Robert Berger @ Carnegie Mellon
+
+  January 1, 1900 is day 0
+  valid from 1900 through 2099 */
+
+/* #include <stdio.h> */
+
+char *MonthNames[] = { "Jan","Feb","Mar","Apr","May","Jun","Jul",
+                        "Aug","Sep","Oct","Nov","Dec" };
+ 
+int MonthDays[] = {0,31,59,90,120,151,181,212,243,273,304,334};
+		
+ 
+char *DayNames[] = { "Sunday","Monday","Tuesday","Wednesday","Thursday",
+                        "Friday","Saturday"};
+
+
+long GetDayNum(Year,Month,Day)
+{
+    long Result;
+    
+    /* Heuristic to allow 4 or 2 digit year specifications */
+    if (Year < 50)
+	Year += 2000;
+      else if (Year < 100)
+	Year += 1900;
+	
+    Result = ((((long) Year-1901)*1461)>>2) + MonthDays[Month-1] + Day + 365;
+    if (Year%4 == 0 && Month > 2)
+        Result++;
+
+    return Result;
+}
+
+GetDate(DayNum,Year,Month,Day)
+long DayNum;
+int *Year,*Month,*Day;    
+{
+    int M,L;
+    long Y;
+	
+    Y = 4*DayNum;
+    Y /= 1461;
+
+    DayNum =  DayNum -365 - (((Y-1)*1461)>>2);
+    
+    L = 0;
+    if (Y%4 == 0 && DayNum > MonthDays[2])
+        L = 1;
+	
+    M = 1;
+	     
+    while (DayNum > MonthDays[M]+L)
+	M++;
+	
+    DayNum -= (MonthDays[M-1]);
+    if (M > 2)
+        DayNum -= L;
+   
+    *Year = Y+1900;
+    *Month = M;
+    *Day = DayNum;
+}    
+
+/* Sunday = 0 */
+GetDayOfWeek(DayNum)
+long DayNum;
+{
+    return DayNum % 7;
+}    
+
+SPrintDate(Str,DayNum)
+char *Str;
+long DayNum;
+{
+    int Month,Day,Year;
+    
+    GetDate(DayNum,&Year,&Month,&Day);
+    sprintf(Str,"%d %s %d",Day,
+                MonthNames[Month-1],Year);
+} 
+
+SPrintDayOfWeek(Str,DayNum)
+char *Str;
+long DayNum;
+{
+    strcpy(Str,DayNames[DayNum%7]);
+}
+
+PrintDate(OutFile,DayNum)
+FILE *OutFile;
+long DayNum;
+{
+    char str[100];
+
+    SPrintDate(str,DayNum);
+    fprintf(OutFile,"%s",str);
+}
+
+PrintDayOfWeek(OutFile,DayNum)
+FILE *OutFile;
+long DayNum;
+{
+    fprintf(OutFile,"%s",DayNames[DayNum%7]);
+}    
+  
+!E!O!F!
+#
+# type    sh /usrvi0/rwb/orbit/orbit.shar   to unpack this archive.
+#
+echo extracting nasa.c...
+cat >nasa.c <<'!E!O!F!'
+/* nasa.c   convert file of NASA keplerians to AMSAT format
+ 7/12/87  Robert W. Berger N3EMO			*/
+
+/* 11/30/88	v3.5	Incorporate Greg Troxel's fix for reading epoch
+			times with imbedded spaces		*/
+
+#include <stdio.h>
+
+main()
+{   char SatName[100],line1[100],line2[100];
+    FILE *InFile,*OutFile;
+    int LineNum,SatNum,ElementSet,EpochRev;
+    double EpochDay,DecayRate,Inclination,RAAN,Eccentricity;
+    double ArgPerigee,MeanAnomaly,MeanMotion;
+    double EpochYear;
+
+    if ((InFile = fopen("nasa.dat","r")) == 0)
+        {
+	printf("\"nasa.dat\" not found\n");
+	exit(-1);
+	}
+
+    if ((OutFile = fopen("kepler.dat","w")) == 0)
+        {
+	printf("Can't write \"kepler.dat\"\n");
+	exit(-1);
+	}
+
+
+    while (fgets(SatName,100,InFile))
+	{
+	printf("%s",SatName);
+	fgets(line1,100,InFile);
+	fgets(line2,100,InFile);
+	
+        sscanf(line1,"%1d",&LineNum);
+  	if (LineNum != 1)
+	    {
+	    printf("Line 1 not present for satellite %s",SatName);
+	    exit(-1);
+	    }
+        sscanf(line2,"%1d",&LineNum);
+  	if (LineNum != 2)
+	    {
+	    printf("Line 2 not present for satellite %s",SatName);
+	    exit(-1);
+	    }
+
+	sscanf(line1,"%*2c%5d%*10c%2lf%12lf%10lf%*21c%5d",
+		&SatNum,&EpochYear,&EpochDay,&DecayRate,&ElementSet);
+	EpochDay += EpochYear *1000;
+
+	ElementSet /= 10;   /* strip off checksum */
+
+	sscanf(line2,"%*8c%8lf%8lf%7lf%8lf%8lf%11lf%5d",
+	   &Inclination,&RAAN,&Eccentricity,&ArgPerigee,&MeanAnomaly,
+	   &MeanMotion,&EpochRev);
+	EpochRev /= 10;   /* strip off checksum */
+	Eccentricity *= 1E-7;
+
+
+	fprintf(OutFile,"Satellite: %s",SatName);
+	fprintf(OutFile,"Catalog number: %d\n",SatNum);
+	fprintf(OutFile,"Epoch time: %lf\n",EpochDay);
+	fprintf(OutFile,"Element set: %d\n",ElementSet);
+	fprintf(OutFile,"Inclination: %lf deg\n",Inclination);
+	fprintf(OutFile,"RA of node: %lf deg\n",RAAN);
+	fprintf(OutFile,"Eccentricity: %lf\n",Eccentricity);
+	fprintf(OutFile,"Arg of perigee: %lf deg\n",ArgPerigee);
+	fprintf(OutFile,"Mean anomaly: %lf deg\n",MeanAnomaly);
+	fprintf(OutFile,"Mean motion: %lf rev/day\n",MeanMotion);
+	fprintf(OutFile,"Decay rate: %le rev/day^2\n",DecayRate);
+	fprintf(OutFile,"Epoch rev: %d\n",EpochRev);
+	fprintf(OutFile,"\n");
+	}
+
+    fclose(InFile);
+    fclose(OutFile);
+
+}
+		
+!E!O!F!
+#
+# type    sh /usrvi0/rwb/orbit/orbit.shar   to unpack this archive.
+#
+echo extracting kepler.dat...
+cat >kepler.dat <<'!E!O!F!'
+HR AMSAT ORBITAL ELEMENTS FOR OSCAR SATELLITES
+FROM N3FKV LORENA, TX      MARCH 3, 1990
+TO ALL RADIO AMATEURS BT
+ 
+Satellite: AO-10
+Catalog number: 14129
+Epoch time:      90049.80793411
+Element set:     456
+Inclination:       25.9253 deg
+RA of node:       218.0969 deg
+Eccentricity:    0.5995939
+Arg of perigee:   119.7301 deg
+Mean anomaly:     312.5438 deg
+Mean motion:    2.05881409 rev/day
+Decay rate:       0.00e+00 rev/day^2
+Epoch rev:            5029
+ 
+Satellite: UO-11
+Catalog number: 14781
+Epoch time:      90060.18781917
+Element set:     621
+Inclination:       97.9647 deg
+RA of node:       116.2327 deg
+Eccentricity:    0.0012630
+Arg of perigee:   224.1641 deg
+Mean anomaly:     135.8969 deg
+Mean motion:   14.64947016 rev/day
+Decay rate:      2.418e-05 rev/day^2
+Epoch rev:           32015
+ 
+Satellite: RS-10/11
+Catalog number: 18129
+Epoch time:      90059.94953892
+Element set:      51
+Inclination:       82.9235 deg
+RA of node:        48.4869 deg
+Eccentricity:    0.0013322
+Arg of perigee:    62.4188 deg
+Mean anomaly:     297.8336 deg
+Mean motion:   13.72063512 rev/day
+Decay rate:       1.65e-06 rev/day^2
+Epoch rev:           13460
+ 
+Satellite: AO-13
+Catalog number: 19216
+Epoch time:      90054.30232176
+Element set:      77
+Inclination:       57.0658 deg
+RA of node:       167.4162 deg
+Eccentricity:    0.6899473
+Arg of perigee:   221.7453 deg
+Mean anomaly:      57.5228 deg
+Mean motion:    2.09701313 rev/day
+Decay rate:      -9.10e-07 rev/day^2
+Epoch rev:            1301
+ 
+Satellite: UO-14
+Catalog number: 20437
+Epoch time:      90051.20925581
+Element set:      19
+Inclination:       98.7074 deg
+RA of node:       127.6262 deg
+Eccentricity:    0.0011863
+Arg of perigee:   133.4472 deg
+Mean anomaly:     226.7691 deg
+Mean motion:   14.28489200 rev/day
+Decay rate:       1.36e-06 rev/day^2
+Epoch rev:             416
+ 
+Satellite: UO-15
+Catalog number: 20438
+Epoch time:      90052.26456850
+Element set:      18
+Inclination:       98.7128 deg
+RA of node:       128.6765 deg
+Eccentricity:    0.0010460
+Arg of perigee:   127.9180 deg
+Mean anomaly:     232.2949 deg
+Mean motion:   14.28268284 rev/day
+Decay rate:       2.23e-06 rev/day^2
+Epoch rev:             431
+ 
+Satellite: AO-16
+Catalog number: 20439
+Epoch time:      90051.27752383
+Element set:      20
+Inclination:       98.7160 deg
+RA of node:       127.7169 deg
+Eccentricity:    0.0011872
+Arg of perigee:   133.0620 deg
+Mean anomaly:     227.1560 deg
+Mean motion:   14.28579197 rev/day
+Decay rate:       3.36e-06 rev/day^2
+Epoch rev:             417
+ 
+Satellite: DO-17
+Catalog number: 20440
+Epoch time:      90052.25739911
+Element set:      11
+Inclination:       98.7153 deg
+RA of node:       128.6947 deg
+Eccentricity:    0.0011993
+Arg of perigee:   130.0555 deg
+Mean anomaly:     230.1712 deg
+Mean motion:   14.28613842 rev/day
+Decay rate:       4.17e-06 rev/day^2
+Epoch rev:             431
+ 
+Satellite: WO-18
+Catalog number: 20441
+Epoch time:      90053.23543324
+Element set:      12
+Inclination:       98.7114 deg
+RA of node:       129.6772 deg
+Eccentricity:    0.0012817
+Arg of perigee:   128.9972 deg
+Mean anomaly:     231.2353 deg
+Mean motion:   14.28729505 rev/day
+Decay rate:       5.43e-06 rev/day^2
+Epoch rev:             445
+ 
+Satellite: LO-19
+Catalog number: 20442
+Epoch time:      90051.20312279
+Element set:      16
+Inclination:       98.7143 deg
+RA of node:       127.6484 deg
+Eccentricity:    0.0012798
+Arg of perigee:   133.6862 deg
+Mean anomaly:     226.5403 deg
+Mean motion:   14.28793437 rev/day
+Decay rate:       3.49e-06 rev/day^2
+Epoch rev:             416
+ 
+Satellite: FO-20
+Catalog number: 20480
+Epoch time:      90056.04185854
+Element set:      14
+Inclination:       99.0553 deg
+RA of node:       123.6579 deg
+Eccentricity:    0.0540918
+Arg of perigee:   302.5752 deg
+Mean anomaly:      52.4250 deg
+Mean motion:   12.83114314 rev/day
+Decay rate:       4.30e-07 rev/day^2
+Epoch rev:             236
+ 
+/EX
+SB ALL @ AMSAT  $ORBS-062.W
+Orbital Elements   062.WEATHER
+ 
+HR AMSAT ORBITAL ELEMENTS FOR WEATHER SATELLITES
+FROM N3FKV LORENA, TX      MARCH 3, 1990
+TO ALL RADIO AMATEURS BT
+ 
+Satellite: NOAA-9
+Catalog number: 15427
+Epoch time:      90060.45603462
+Element set:     486
+Inclination:       99.1648 deg
+RA of node:        57.8071 deg
+Eccentricity:    0.0014466
+Arg of perigee:   314.1835 deg
+Mean anomaly:      45.8150 deg
+Mean motion:   14.12457910 rev/day
+Decay rate:       9.40e-06 rev/day^2
+Epoch rev:           26877
+ 
+Satellite: NOAA-10
+Catalog number: 16969
+Epoch time:      90060.52697286
+Element set:     346
+Inclination:       98.6135 deg
+RA of node:        90.8378 deg
+Eccentricity:    0.0012702
+Arg of perigee:   221.3159 deg
+Mean anomaly:     138.7082 deg
+Mean motion:   14.23474323 rev/day
+Decay rate:       6.46e-06 rev/day^2
+Epoch rev:           17929
+ 
+Satellite: MET-2/16
+Catalog number: 18312
+Epoch time:      90058.91549732
+Element set:     374
+Inclination:       82.5506 deg
+RA of node:        16.8901 deg
+Eccentricity:    0.0010421
+Arg of perigee:   196.7088 deg
+Mean anomaly:     163.3733 deg
+Mean motion:   13.83602617 rev/day
+Decay rate:       2.18e-06 rev/day^2
+Epoch rev:           12787
+ 
+Satellite: MET-2/17
+Catalog number: 18820
+Epoch time:      90058.98423229
+Element set:     202
+Inclination:       82.5413 deg
+RA of node:        77.2737 deg
+Eccentricity:    0.0015284
+Arg of perigee:   274.0695 deg
+Mean anomaly:      85.8720 deg
+Mean motion:   13.84296367 rev/day
+Decay rate:       1.48e-06 rev/day^2
+Epoch rev:           10507
+ 
+Satellite: MET-3/2
+Catalog number: 19336
+Epoch time:      90057.87193849
+Element set:     379
+Inclination:       82.5488 deg
+RA of node:       355.4769 deg
+Eccentricity:    0.0015984
+Arg of perigee:   226.0902 deg
+Mean anomaly:     133.8903 deg
+Mean motion:   13.16876329 rev/day
+Decay rate:       3.91e-06 rev/day^2
+Epoch rev:            7643
+ 
+Satellite: NOAA-11
+Catalog number: 19531
+Epoch time:      90060.35370320
+Element set:     203
+Inclination:       98.9706 deg
+RA of node:         8.6194 deg
+Eccentricity:    0.0011513
+Arg of perigee:   225.0782 deg
+Mean anomaly:     134.9451 deg
+Mean motion:   14.11467817 rev/day
+Decay rate:       8.90e-06 rev/day^2
+Epoch rev:            7375
+ 
+Satellite: MET-2/18
+Catalog number: 19851
+Epoch time:      90058.20440967
+Element set:     153
+Inclination:       82.5234 deg
+RA of node:       316.0960 deg
+Eccentricity:    0.0013491
+Arg of perigee:   319.0705 deg
+Mean anomaly:      40.9448 deg
+Mean motion:   13.83938725 rev/day
+Decay rate:       1.88e-06 rev/day^2
+Epoch rev:            5035
+ 
+Satellite: MET-3/3
+Catalog number: 20305
+Epoch time:      90060.01873175
+Element set:      54
+Inclination:       82.5545 deg
+RA of node:       294.3024 deg
+Eccentricity:    0.0015118
+Arg of perigee:   240.3269 deg
+Mean anomaly:     119.6305 deg
+Mean motion:   13.15851639 rev/day
+Decay rate:       4.60e-07 rev/day^2
+Epoch rev:            1672
+ 
+/EX
+SB ALL @ AMSAT  $ORBS-062.M
+Orbital Elements   062.MISC
+ 
+HR AMSAT ORBITAL ELEMENTS FOR MANNED AND MISCELLANEOUS SATELLITES
+FROM N3FKV LORENA, TX      MARCH 3, 1990
+TO ALL RADIO AMATEURS BT
+ 
+Satellite: SALYUT 7
+Catalog number: 13138
+Epoch time:      90060.28992269
+Element set:      76
+Inclination:       51.6040 deg
+RA of node:       127.0926 deg
+Eccentricity:    0.0000717
+Arg of perigee:    43.7023 deg
+Mean anomaly:     316.3899 deg
+Mean motion:   15.55378681 rev/day
+Decay rate:      8.612e-05 rev/day^2
+Epoch rev:           44801
+ 
+Satellite: MIR
+Catalog number: 16609
+Epoch time:      90060.29778265
+Element set:     434
+Inclination:       51.6177 deg
+RA of node:       153.8856 deg
+Eccentricity:    0.0016747
+Arg of perigee:   220.9865 deg
+Mean anomaly:     138.9686 deg
+Mean motion:   15.58930728 rev/day
+Decay rate:     -7.013e-05 rev/day^2
+Epoch rev:           23125
+ 
+!E!O!F!
+#
+# type    sh /usrvi0/rwb/orbit/orbit.shar   to unpack this archive.
+#
+echo extracting mode.dat...
+cat >mode.dat <<'!E!O!F!'
+Satellite: UO-11
+Beacon:           145.8260 MHz
+
+Satellite: AO-13
+Beacon:           145.8260 MHz
+Mode: B		from 0 to 165
+Mode: JL	from 165 to 195
+Mode: S		from 195 to 200
+Mode: BS	from 200 to 205
+Mode: B		from 205 to 256
+
+Satellite: NOAA-9
+Beacon:           137.6200 MHz
+
+Satellite: NOAA-10
+Beacon:           137.5000 MHz
+
+Satellite: MIR
+Beacon:           143.6250 MHz
+
+Satellite: RS-10/11
+Beacon:           29.357 MHz
+!E!O!F!
+#
+# type    sh /usrvi0/rwb/orbit/orbit.shar   to unpack this archive.
+#
+echo extracting pgh.sit...
+cat >pgh.sit <<'!E!O!F!'
+W3VC  Pittsburgh
+40.45361		Latitude
+79.94417		Longitude
+300			Height (Meters)
+0			Min Elevation (Degrees)
+Eclipse
+Flip
+!E!O!F!
+#
+# type    sh /usrvi0/rwb/orbit/orbit.shar   to unpack this archive.
+#
+echo extracting Makefile...
+cat >Makefile <<'!E!O!F!'
+CFLAGS = -O
+
+orbit:: orbit.o orbitr.o
+	cc orbit.o orbitr.o -lm -o orbit
+
+!E!O!F!
+

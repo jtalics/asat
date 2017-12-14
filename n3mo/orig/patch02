@@ -1,0 +1,172 @@
+Path: funic!fuug!mcsun!uunet!sparky!kent
+From: rwb@vi.ri.cmu.edu (Bob Berger)
+Newsgroups: comp.sources.misc
+Subject: v22i105:  n3emo-orbit - track earth satellites, Patch02
+Message-ID: <1991Sep10.220229.13205@sparky.IMD.Sterling.COM>
+Date: 10 Sep 91 22:02:29 GMT
+Sender: kent@sparky.IMD.Sterling.COM (Kent Landfield)
+Followup-To: comp.sources.d
+Organization: School of Computer Science, Carnegie Mellon
+Lines: 159
+Approved: kent@sparky.imd.sterling.com
+X-Md4-Signature: d8c2b34458bd80184ff7a8c8980c23bf
+
+Submitted-by: Bob Berger <rwb@vi.ri.cmu.edu>
+Posting-number: Volume 22, Issue 105
+Archive-name: n3emo-orbit/patch02
+Environment: UNIX
+Patch-To: n3emo-orbit: Volume 11, Issue 20
+
+Below is a patch to N3EMO, originally posted to comp.sources.misc in 
+volume11. You will need to get the following articles in order to apply
+this patch:
+
+v11i020   n3emo-orbit/part01    orbit: track earth satellites
+v14i095   n3emo-orbit/patch01   Patch to orbit3.7
+
+  The  N3EMO  orbit  program  simulates  the  motions  of earth satellites.
+The program was written for use by amateur radio operators, but is useful to
+others, such as astronomers  interested  in observing artificial satellites,
+space enthusiasts tracking shuttle missions, and meteorologists using  weather
+satellites.  The program is distributed in source form in the C language, and
+has been used on a wide variety of computers, from micros to mainframes.
+
+------
+diff -c ../orbit3.9/orbit.c ./orbit.c
+*** ../orbit3.9/orbit.c	Tue Sep 10 14:25:33 1991
+--- ./orbit.c	Tue Sep 10 14:27:28 1991
+***************
+*** 1,7 ****
+! /* Copyright (c) 1986,1987,1988,1989,1990 Robert W. Berger N3EMO
+     May be freely distributed, provided this notice remains intact. */
+  
+  /* Change Log
+  	4/2/1990	v3.9 Misc bug fixes. Changed ElementSet and
+  			EpochRev to unsigned longs in nasa.c. Allow
+  			satellite names with spaces in mode.dat.
+--- 1,13 ----
+! /* Copyright (c) 1986,1987,1988,1989,1990,1991 Robert W. Berger N3EMO
+     May be freely distributed, provided this notice remains intact. */
+  
+  /* Change Log
++ 	8/9/1991	v3.9.2 Fix orbital decay correction (it was
++ 			underestimated by a factor of 2 in previous versions).
++ 
++ 	9/25/1990	v3.9.1 Ignore trailing whitespace after 
++ 			       satellite names.
++ 
+  	4/2/1990	v3.9 Misc bug fixes. Changed ElementSet and
+  			EpochRev to unsigned longs in nasa.c. Allow
+  			satellite names with spaces in mode.dat.
+***************
+*** 101,107 ****
+                  char ModeStr[20];
+                 }  ModeRec;
+   
+! char VersionStr[] = "N3EMO Orbit Simulator  v3.9";
+   
+      /*  Keplerian Elements and misc. data for the satellite              */
+      double  EpochDay;                   /* time of epoch                 */
+--- 107,113 ----
+                  char ModeStr[20];
+                 }  ModeRec;
+   
+! char VersionStr[] = "N3EMO Orbit Simulator  v3.9.2";
+   
+      /*  Keplerian Elements and misc. data for the satellite              */
+      double  EpochDay;                   /* time of epoch                 */
+***************
+*** 236,242 ****
+--- 242,264 ----
+      return 0;
+  }
+  
++ /* Strip trailing whitespace from a string */
++ StripTrailing(s)
++ char *s;
++ {
++     char *tmp;
+  
++     tmp = s;
++     while (*tmp != '\0')
++ 	tmp++;
++ 
++     tmp--;
++     while (*tmp == ' ' || *tmp == '\t')
++ 	tmp--;
++ 
++     tmp[1] = '\0';
++ }
++ 
+  GetSatelliteParams()
+  {
+      FILE *InFile;
+***************
+*** 255,260 ****
+--- 277,283 ----
+  	{
+  	printf("Letter or satellite name :");
+  	gets(SatName);
++ 	StripTrailing(SatName);
+  
+  	if ((InFile = fopen("kepler.dat","r")) == 0)
+  	    {
+***************
+*** 280,285 ****
+--- 303,309 ----
+  		}
+  	    found = 1;
+  	    strncpy(SatName,&str[11],strlen(str)-12);
++ 	    StripTrailing(SatName);
+  	    }
+  		
+  	 else 
+***************
+*** 289,294 ****
+--- 313,320 ----
+  	    	if (! fgets(str,100,InFile))
+  	    	    break;	/* EOF */
+  
++ 		StripTrailing(str);
++ 
+  	    	if (strncmp(str,"Satellite: ",11) == 0)
+  		   if (cstrncmp(SatName,&str[11],strlen(SatName)) == 0)
+  			found = 1;
+***************
+*** 380,385 ****
+--- 406,412 ----
+          {
+  	if (! fgets(str,100,InFile))
+  	    break;	/* EOF */
++ 	StripTrailing(str);
+   	if (strncmp(str,"Satellite: ",11) == 0)
+   	  if (cstrncmp(SatName,&str[11],strlen(SatName)) == 0)
+  		found = 1;
+***************
+*** 567,575 ****
+          {
+   
+          AverageMotion = epochMeanMotion
+- 	   + (CurrentTime-EpochDay)*OrbitalDecay/2;
+-         CurrentMotion = epochMeanMotion
+  	   + (CurrentTime-EpochDay)*OrbitalDecay;
+  
+          SemiMajorAxis = 331.25 * exp(2*log(MinutesPerDay/CurrentMotion)/3);
+   
+--- 594,602 ----
+          {
+   
+          AverageMotion = epochMeanMotion
+  	   + (CurrentTime-EpochDay)*OrbitalDecay;
++         CurrentMotion = epochMeanMotion
++ 	   + (CurrentTime-EpochDay)*OrbitalDecay*2;
+  
+          SemiMajorAxis = 331.25 * exp(2*log(MinutesPerDay/CurrentMotion)/3);
+   
+
+exit 0 # Just in case...
+-- 
+Kent Landfield                   INTERNET: kent@sparky.IMD.Sterling.COM
+Sterling Software, IMD           UUCP:     uunet!sparky!kent
+Phone:    (402) 291-8300         FAX:      (402) 291-4362
+Please send comp.sources.misc-related mail to kent@uunet.uu.net.
