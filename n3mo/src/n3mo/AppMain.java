@@ -17,7 +17,7 @@ import java.util.stream.Stream;
 public class AppMain {
 	private static final boolean SSPELLIPSE = false; /* If non zero, use ellipsoidal earth model when calculating
 														longitude, latitude, and height */
-
+/* test */
 	static final double MinutesPerDay = 24 * 60.0;
 	static final double SecondsPerDay = 60 * MinutesPerDay;
 	static final double HalfSecond = 0.5 / SecondsPerDay;
