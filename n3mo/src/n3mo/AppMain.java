@@ -52,7 +52,7 @@ public class AppMain {
 	double EpochArgPerigee; /* argument of perigee at epoch */
 	double Eccentricity;
 	double Inclination;
-	String SatName = "f";
+	String SatName = "f"; // AO-27 for example
 	int ElementSet;
 	double BeaconFreq; /* Mhz, used for doppler calc */
 	double MaxPhase; /* Phase units in 1 orbit */
@@ -93,7 +93,7 @@ public class AppMain {
 			NOCONSOLE = true; // probably running in IDE or debugger
 			// throw new Exception("Cannot open a console");
 		}
-
+		System.out.println("Curret directory is " + System.getProperty("user.dir"));
 		AppMain appMain = new AppMain();
 		appMain.mainC();
 	}
@@ -107,7 +107,7 @@ public class AppMain {
 				CurrentMotion;
 		double MeanAnomaly, TrueAnomaly;
 		double SemiMajorAxis;
-		double SiteMatrix[][] = new double[3][3];
+		final double SiteMatrix[][] = new double[3][3];
 		// double RAANPrecession,PerigeePrecession;
 		// double SSPLat,SSPLong;
 		long OrbitNum, PrevOrbitNum;
@@ -305,8 +305,7 @@ public class AppMain {
 				while (iter.hasNext()) {
 					line = iter.next();
 					if (line.startsWith("Satellite: ")) {
-						i++;
-						if (++i == LetterNum(satchar)) {
+						if ((++i) == LetterNum(satchar)) {
 							found = true;
 							SatName = line.substring(11);
 							break;
@@ -333,13 +332,15 @@ public class AppMain {
 
 		BeaconFreq = 146.0; /* Default value */
 
-		line = iter.next(); // skip catalog
-
+		line = iter.next(); // skip line "Catalog number;"
+		line = iter.next();
+		
 		token = "Epoch time:";
 		if (!line.startsWith(token)) {
 			throw new Exception();
 		}
-		EpochDay = Double.parseDouble(token.substring(token.length()));
+		String s = line.substring(token.length()+1);
+		EpochDay = Double.parseDouble(s);
 		EpochYear = (int) (EpochDay / 1000.0);
 		EpochDay -= EpochYear * 1000.0;
 		EpochDay += GetDayNum(EpochYear, 1, 0);
@@ -351,14 +352,18 @@ public class AppMain {
 		if (!line.startsWith(token)) {
 			throw new Exception();
 		}
-		ElementSet = Integer.parseInt(token.substring(token.length()));
+		s = line.substring(token.length()+1);
+		ElementSet = Integer.parseInt(s);
 
 		line = iter.next();
 		token = "Inclination:";
 		if (!line.startsWith(token)) {
 			throw new Exception();
 		}
-		Inclination = Double.parseDouble(token.substring(token.length()));
+		String deg = " deg";
+		s = line.substring(token.length()+1);
+		if (s.endsWith(deg)) s = s.substring(0, s.length()-deg.length());
+		Inclination = Double.parseDouble(s);
 		Inclination *= RadiansPerDegree;
 
 		line = iter.next();
@@ -366,7 +371,9 @@ public class AppMain {
 		if (!line.startsWith(token)) {
 			throw new Exception();
 		}
-		EpochRAAN = Double.parseDouble(token.substring(token.length()));
+		s = line.substring(token.length()+1);
+		if (s.endsWith(deg)) s = s.substring(0, s.length()-deg.length());
+		EpochRAAN = Double.parseDouble(s);
 		EpochRAAN *= RadiansPerDegree;
 
 		line = iter.next();
@@ -374,14 +381,16 @@ public class AppMain {
 		if (!line.startsWith(token)) {
 			throw new Exception();
 		}
-		Eccentricity = Double.parseDouble(token.substring(token.length()));
+		Eccentricity = Double.parseDouble(line.substring(token.length()+1));
 
 		line = iter.next();
 		token = "Arg of perigee:";
 		if (!line.startsWith(token)) {
 			throw new Exception();
 		}
-		EpochArgPerigee = Double.parseDouble(token.substring(token.length()));
+		s = line.substring(token.length()+1);
+		if (s.endsWith(deg)) s = s.substring(0, s.length()-deg.length());
+		EpochArgPerigee = Double.parseDouble(s);
 		EpochArgPerigee *= RadiansPerDegree;
 
 		line = iter.next();
@@ -389,7 +398,9 @@ public class AppMain {
 		if (!line.startsWith(token)) {
 			throw new Exception();
 		}
-		EpochMeanAnomaly = Double.parseDouble(token.substring(token.length()));
+		s = line.substring(token.length()+1);
+		if (s.endsWith(deg)) s = s.substring(0, s.length()-deg.length());
+		EpochMeanAnomaly = Double.parseDouble(s);
 		EpochMeanAnomaly *= RadiansPerDegree;
 
 		line = iter.next();
@@ -397,28 +408,34 @@ public class AppMain {
 		if (!line.startsWith(token)) {
 			throw new Exception();
 		}
-		epochMeanMotion = Double.parseDouble(token.substring(token.length()));
+		String revperday = "rev/day";
+		s = line.substring(token.length()+1);
+		if (s.endsWith(revperday)) s = s.substring(0, s.length()-revperday.length());
+		epochMeanMotion = Double.parseDouble(s);
 
 		line = iter.next();
 		token = "Decay rate:";
 		if (!line.startsWith(token)) {
 			throw new Exception();
 		}
-		OrbitalDecay = Double.parseDouble(token.substring(token.length()));
+		String revperdaysquared = "rev/day^2";
+		s = line.substring(token.length()+1);
+		if (s.endsWith(revperdaysquared)) s = s.substring(0, s.length()-revperdaysquared.length());
+		OrbitalDecay = Double.parseDouble(s);
 
 		line = iter.next();
 		token = "Epoch rev:";
 		if (!line.startsWith(token)) {
 			throw new Exception();
 		}
-		EpochOrbitNum = Integer.parseInt(token.substring(token.length()));
+		EpochOrbitNum = Integer.parseInt(line.substring(token.length()+1));
 
 		while (iter.hasNext() && (line = iter.next()).length() > 2) {
 			token = "Beacon:";
 			if (!line.startsWith(token)) {
 				throw new Exception();
 			}
-			BeaconFreq = Double.parseDouble(token.substring(token.length()));
+			BeaconFreq = Double.parseDouble(line.substring(token.length()+1));
 		}
 
 		PrintApogee = (Eccentricity >= 0.3);
@@ -444,21 +461,21 @@ public class AppMain {
 				if (!line.startsWith(token)) {
 					throw new Exception();
 				}
-				BeaconFreq = Double.parseDouble(token.substring(token.length()));
+				BeaconFreq = Double.parseDouble(line.substring(token.length()+1));
 
 				line = iter.next();
 				token = "Perigee phase: ";
 				if (!line.startsWith(token)) {
 					throw new Exception();
 				}
-				perigeePhase = Double.parseDouble(token.substring(token.length()));
+				perigeePhase = Double.parseDouble(line.substring(token.length()+1));
 
 				line = iter.next();
 				token = "Max phase: ";
 				if (!line.startsWith(token)) {
 					throw new Exception();
 				}
-				MaxPhase = Double.parseDouble(token.substring(token.length()));
+				MaxPhase = Double.parseDouble(line.substring(token.length()+1));
 
 				line = iter.next();
 				Scanner scanner = new Scanner(line);
@@ -468,7 +485,7 @@ public class AppMain {
 					scanner.close();
 					throw new Exception();
 				}
-				Modes[NumModes].ModeStr = line.substring(token.length(), token.length() + 20);
+				Modes[NumModes].ModeStr = line.substring(token.length(), token.length() +1 + 20);
 				Modes[NumModes].MinPhase = scanner.nextInt();
 				Modes[NumModes].MaxPhase = scanner.nextInt();
 				scanner.close();
@@ -530,41 +547,48 @@ public class AppMain {
 
 	void GetSiteParams() throws IOException {
 		String line;
-		String name = "zerobouy.sit";
+		String name = "zerobuoy.sit";
 
 		if (!NOCONSOLE) {
 			name = System.console().readLine("Site name :").trim() + ".sit";
 		}
-
 		List<String> lines = getLines(new File(name));
-		SiteName = lines.iterator().next();
-		line = lines.iterator().next();
+		Iterator<String> iter = lines.iterator();
+		SiteName = iter.next();
+		line = iter.next();
+		String latitude = "\t\tLatitude"; 
+		if (line.endsWith(latitude)) line = line.substring(0, line.length() - latitude.length());
 		SiteLat = Double.parseDouble(line);
 		SiteLat *= RadiansPerDegree;
 
-		line = lines.iterator().next();
+		line = iter.next();
+		String longitude = "\t\tLongitude"; 
+		if (line.endsWith(longitude)) line = line.substring(0, line.length() - longitude.length());
 		SiteLong = Double.parseDouble(line);
 		SiteLong *= RadiansPerDegree;
 
-		line = lines.iterator().next();
+		line = iter.next();
+		String heightMeters = "\t\tHeight (Meters)";
+		if (line.endsWith(heightMeters)) line = line.substring(0, line.length() - heightMeters.length());
 		SiteAltitude = Double.parseDouble(line);
 		SiteAltitude /= 1000; // meters to km
 
-		line = lines.iterator().next();
-		SiteMinElev = Double.parseDouble(line);
+		line = iter.next();
+		String minElevationDegrees = "\t\tMin Elevation (Degrees)";
+		if (line.endsWith(minElevationDegrees)) line = line.substring(0, line.length() - minElevationDegrees.length());
+		SiteAltitude = Double.parseDouble(line);
 		SiteMinElev *= RadiansPerDegree;
 
 		Flip = PrintEclipses = false;
-		while (lines.iterator().hasNext()) {
-			line = lines.iterator().next();
+		while (iter.hasNext()) {
+			line = iter.next();
 			if (line.startsWith("Flip")) {
 				Flip = true;
 			} else if (line.startsWith("Eclipse")) {
 				PrintEclipses = true;
 			} else
-				System.err.println(name + " unknown option: " + line);
+				System.err.println(name + " unknown option: '" + line +"'");
 		}
-
 	}
 
 	void GetSimulationParams() {
@@ -918,7 +942,7 @@ public class AppMain {
 
 		retval[0] = SiteMatrix[0][0] * SatX + SiteMatrix[0][1] * SatY + SiteMatrix[0][2] * SatZ;
 		retval[1] = SiteMatrix[1][0] * SatX + SiteMatrix[1][1] * SatY + SiteMatrix[1][2] * SatZ;
-		retval[3] = SiteMatrix[2][0] * SatX + SiteMatrix[2][1] * SatY + SiteMatrix[2][2] * SatZ;
+		retval[2] = SiteMatrix[2][0] * SatX + SiteMatrix[2][1] * SatY + SiteMatrix[2][2] * SatZ;
 		return retval;
 	}
 
