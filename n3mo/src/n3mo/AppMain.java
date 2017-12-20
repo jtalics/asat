@@ -1,33 +1,30 @@
 package n3mo;
 
-import java.io.Console;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Scanner;
-import java.util.stream.Stream;
 
 public class AppMain {
 	private static final boolean SSPELLIPSE = false; /* If non zero, use ellipsoidal earth model when calculating
 														longitude, latitude, and height */
 /* test */
-	static final double MinutesPerDay = 24 * 60.0;
-	static final double SecondsPerDay = 60 * MinutesPerDay;
+	static final double MinutesPerDay = 24.0 * 60.0;
+	static final double SecondsPerDay = 60.0 * MinutesPerDay;
 	static final double HalfSecond = 0.5 / SecondsPerDay;
 	static final double EarthRadius = 6378.16; /* Kilometers */
 	static final double C = 2.997925e5; /* Kilometers/Second */
 	static final double TropicalYear = 365.24199; /* Mean solar days */
 	static final double EarthEccentricity = 0.016713;
-	static final double DegreesPerRadian = 180 / Math.PI;
-	static final double RadiansPerDegree = Math.PI / 180;
-	static final double PI2 = Math.PI * Math.PI;
+	static final double DegreesPerRadian = 180.0 / Math.PI;
+	static final double RadiansPerDegree = Math.PI / 180.0;
+	static final double PI2 = Math.PI * 2;
 	// #define ABS(x) ((x) < 0 ? (-(x)) : (x))
 	// #define SQR(x) ((x)*(x))
 
@@ -52,7 +49,7 @@ public class AppMain {
 	double EpochArgPerigee; /* argument of perigee at epoch */
 	double Eccentricity;
 	double Inclination;
-	String SatName = "f"; // AO-27 for example
+	String SatName = "k"; // ISS for example
 	int ElementSet;
 	double BeaconFreq; /* Mhz, used for doppler calc */
 	double MaxPhase; /* Phase units in 1 orbit */
@@ -93,7 +90,7 @@ public class AppMain {
 			NOCONSOLE = true; // probably running in IDE or debugger
 			// throw new Exception("Cannot open a console");
 		}
-		System.out.println("Curret directory is " + System.getProperty("user.dir"));
+		System.out.println("Current directory is " + System.getProperty("user.dir"));
 		AppMain appMain = new AppMain();
 		appMain.mainC();
 	}
@@ -101,7 +98,7 @@ public class AppMain {
 	private void mainC() throws Exception {
 
 		double ReferenceOrbit; /* Floating point orbit # at epoch */
-		double CurrentTime, TmpTime, PrevTime; /* In Days */
+		double CurrentTime, TmpTime/*, PrevTime*/; /* In Days */
 		double CurrentOrbit;
 		double AverageMotion, /* Corrected for drag */
 				CurrentMotion;
@@ -131,7 +128,7 @@ public class AppMain {
 			FileName = System.console().readLine("Output file (RETURN for TTY): ");
 		}
 		if (FileName == null || FileName.length() > 0) {
-			File file = new File(FileName, "w");
+			File file = new File(FileName, SatName + ".eph");
 			OutFile = new PrintStream(file);
 		} else
 			OutFile = System.out;
@@ -149,7 +146,7 @@ public class AppMain {
 
 		PrevDay = -10000;
 		PrevOrbitNum = -10000;
-		PrevTime = StartTime - 2 * StepTime;
+		/* PrevTime = StartTime - 2 * StepTime; */
 
 		BeaconFreq *= 1E6; /* Convert to Hz */
 
@@ -165,7 +162,7 @@ public class AppMain {
 			CurrentOrbit = ReferenceOrbit + (CurrentTime - EpochDay) * AverageMotion;
 			OrbitNum = (long) CurrentOrbit;
 
-			MeanAnomaly = (CurrentOrbit - OrbitNum) * Math.PI * 2;
+			MeanAnomaly = (CurrentOrbit - OrbitNum) * PI2;
 
 			TmpTime = CurrentTime;
 			if (MeanAnomaly < Math.PI) {
@@ -189,9 +186,9 @@ public class AppMain {
 
 			double[] site = GetSitPosition(SiteLat, SiteLong, SiteAltitude, CurrentTime, SiteMatrix); // &SiteX,&SiteY,&SiteZ,&SiteVX,&SiteVY,
 
-			double[] bearings = GetBearings(sat[0], sat[1], sat[2], site[0], site[2], site[3], SiteMatrix); // &Azimuth,&Elevation
+			double[] bearings = GetBearings(sat[0], sat[1], sat[2], site[0], site[1], site[2], SiteMatrix); // &Elevation,&Azimuth
 
-			if (bearings[1] >= SiteMinElev && CurrentTime >= StartTime) {
+			if (bearings[0] >= SiteMinElev && CurrentTime >= StartTime) {
 
 				Day = (long) (CurrentTime + HalfSecond);
 				if (((double) Day) > CurrentTime + HalfSecond)
@@ -211,31 +208,32 @@ public class AppMain {
 					if (Flip) {
 						OutFile.print(" Az'  El' ");
 					}
-					OutFile.print("Doppler Range");
-					OutFile.print(" Height  Lat  Long  Phase(" + MaxPhase + ")");
+					OutFile.print("Doppler Range Height  Lat  Long  Phase(" + MaxPhase + ")");
+					OutFile.println();
 				}
+
 				PrevOrbitNum = OrbitNum;
 				PrevDay = Day;
 				PrintTime(OutFile, CurrentTime + HalfSecond);
 
-				OutFile.print("  " + bearings[0] * DegreesPerRadian + " " + bearings[1] * DegreesPerRadian);
+				OutFile.print("  " + Math.round(bearings[1] * DegreesPerRadian) + " " + Math.round(bearings[0] * DegreesPerRadian));
 				if (Flip) {
-					bearings[0] += Math.PI;
-					if (bearings[0] >= Math.PI * 2) {
-						bearings[0] -= Math.PI * 2;
+					bearings[1] += Math.PI;
+					if (bearings[1] >= Math.PI * 2) {
+						bearings[1] -= Math.PI * 2;
 					}
-					bearings[1] = Math.PI - bearings[1];
-					OutFile.print("  " + bearings[0] * DegreesPerRadian + "  " + bearings[1] * DegreesPerRadian);
+					bearings[0] = Math.PI - bearings[0];
+					OutFile.print("  " + Math.round(bearings[1] * DegreesPerRadian) + "  " + Math.round(bearings[0] * DegreesPerRadian));
 				}
 
-				double[] range = GetRange(site[0], site[1], site[2], site[3], site[4], sat[0], sat[1], sat[2], sat[3],
-						sat[4], sat[5]); // Range,RangeRate
+				double[] range = GetRange(site[0], site[1], site[2], site[3], site[4], sat[0], sat[1], sat[2], /* sat[3] is Radius*/sat[4],
+						sat[5], sat[6]); // Range,RangeRate
 
 				Doppler = -BeaconFreq * range[1] / C;
-				OutFile.print("  " + Doppler + " " + range[0]);
+				OutFile.print("  " + Math.round(Doppler) + " " + Math.round(range[0]));
 
 				double[] ssp = GetSubSatPoint(sat[0], sat[1], sat[2], CurrentTime); // ,&SSPLat,&SSPLong,&Height
-				OutFile.print(" " + ssp[2] + "  " + ssp[0] * DegreesPerRadian + "  " + ssp[1] * DegreesPerRadian);
+				OutFile.print(" " + Math.round(ssp[2]) + "  " + Math.round(ssp[0] * DegreesPerRadian) + "  " + Math.round(ssp[1] * DegreesPerRadian));
 
 				Phase = (int) (MeanAnomaly / (Math.PI * 2) * MaxPhase + perigeePhase);
 				while (Phase < 0) {
@@ -245,14 +243,14 @@ public class AppMain {
 					Phase -= MaxPhase;
 				}
 
-				OutFile.print(" " + Phase + "  ");
+				OutFile.print(" " + Math.round(Phase) + "  ");
 				PrintMode(OutFile, Phase);
 
 				if (PrintApogee && (MeanAnomaly == Math.PI)) {
 					OutFile.print("    Apogee");
 				}
 				if (PrintEclipses && Eclipsed(sat[0], sat[1], sat[2], sat[3], CurrentTime)) {
-					OutFile.println("  Eclipse");
+					OutFile.print("  Eclipse");
 				}
 				OutFile.println();
 				PrevVisible = true;
@@ -263,7 +261,7 @@ public class AppMain {
 				DidApogee = true;
 			}
 
-			PrevTime = CurrentTime;
+			/* PrevTime = CurrentTime;*/
 			CurrentTime = TmpTime;
 		}
 		OutFile.close();
@@ -595,7 +593,9 @@ public class AppMain {
 		// double hour, duration;
 		int Month, Day, Year;
 
-		String line = "6 21 2017";
+		//Calendar cal = new GregorianCalendar();
+		// String line = ""+(cal.get(Calendar.MONTH)+1)+" "+cal.get(Calendar.DAY_OF_MONTH)+ " " + cal.get(Calendar.YEAR);
+		String line = "11 30 2017";
 		if (!NOCONSOLE) {
 			line = System.console().readLine("Start date (UTC) (Month Day Year) :");
 		}
@@ -918,12 +918,12 @@ public class AppMain {
 
 		xyz = GetTopocentric(SatX, SatY, SatZ, SiteX, SiteY, SiteZ, SiteMatrix);
 
-		retval[0] = Math.atan(xyz[2] / Math.sqrt((xyz[0] * xyz[0]) + (xyz[1] * xyz[1])));
+		retval[0] = Math.atan(xyz[2] / Math.sqrt((xyz[0] * xyz[0]) + (xyz[1] * xyz[1]))); // Elevation
 
-		retval[1] = Math.PI - Math.atan2(xyz[1], xyz[0]);
+		retval[1] = Math.PI - Math.atan2(xyz[1], xyz[0]); // Azimuth
 
-		if (retval[0] < 0) {
-			retval[0] += Math.PI;
+		if (retval[1] < 0) {
+			retval[1] += Math.PI;
 		}
 		return retval;
 	}
@@ -976,9 +976,9 @@ public class AppMain {
 		DY = SatY - SiteY;
 		DZ = SatZ - SiteZ;
 
-		retval[0] = Math.sqrt((DX * DX) + (DY * DY) + (DZ * DZ));
+		retval[0] = Math.sqrt((DX * DX) + (DY * DY) + (DZ * DZ)); // Range
 
-		retval[1] = ((SatVX - SiteVX) * DX + (SatVY - SiteVY) * DY + SatVZ * DZ) / retval[0];
+		retval[1] = ((SatVX - SiteVX) * DX + (SatVY - SiteVY) * DY + SatVZ /*why not "-SiteVX"?*/ * DZ) / retval[0]; // RangeRate
 
 		return retval;
 	}

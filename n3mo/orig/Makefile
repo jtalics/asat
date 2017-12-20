@@ -1,9 +1,15 @@
-CFLAGS = -O
+
+
+orbit.o: orbit.c
+	gcc -c -g -o orbit.o orbit.c
+
+orbitr.o: orbitr.c
+	gcc -c -g -o orbitr.o orbitr.c
 
 orbit:: orbit.o orbitr.o
-	cc orbit.o orbitr.o -lm -o orbit
+	gcc -o orbit orbit.o orbitr.o -lm
 
 nasa:: nasa.o
-	cc nasa.o -lm -o nasa
+	gcc -lm  nasa.o -o nasa
 
 
