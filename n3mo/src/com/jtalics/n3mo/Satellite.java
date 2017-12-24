@@ -3,34 +3,42 @@ package com.jtalics.n3mo;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
 
 import com.jtalics.n3mo.AppMain.ModeRec;
 
-class Satellite {
+public class Satellite {
 
-	double BeaconFreq; /* Mhz, used for doppler calc */
-	String SatName = "k"; // ISS for example
-	/* Keplerian Elements and misc. data for the satellite */
-	double EpochDay; /* time of epoch */
-	double EpochMeanAnomaly; /* Mean Anomaly at epoch */
-	long EpochOrbitNum; /* Integer orbit # of epoch */
-	double EpochRAAN; /* RAAN at epoch */
-	double epochMeanMotion; /* Revolutions/day */
-	double OrbitalDecay; /* Revolutions/day^2 */
-	double EpochArgPerigee; /* argument of perigee at epoch */
-	double Eccentricity;
-	double Inclination;
-	int ElementSet;
+	public String SatName;// = "k"; // ISS for example // TODO - make finalS
+	/* Keplerian Elements*/
+	// https://marine.rutgers.edu/cool/education/class/paul/orbits.html
+	public final double EpochDay; /* time of epoch */
+	public final double Inclination;
+	public final double EpochRAAN; /* RAAN at epoch */
+	public final double Eccentricity;
+	public final double EpochArgPerigee; /* argument of perigee at epoch */
+	public final double epochMeanMotion; /* Revolutions/day */
+	public final double EpochMeanAnomaly; /* Mean Anomaly at epoch */
+	// and misc. data for the satellite 
+	public final long EpochOrbitNum; /* Integer orbit # of epoch */
+	public final double OrbitalDecay; /* Revolutions/day^2 */
+	public final int ElementSet;
+	public double BeaconFreq; /* Mhz, used for doppler calc */
 	double MaxPhase; /* Phase units in 1 orbit */
 	double perigeePhase;
 	int NumModes;
 	ModeRec[] Modes = new ModeRec[AppMain.MaxModes];
 	boolean PrintApogee = false;
 	
-	Satellite(AppMain appMain) throws Exception {
+	/**
+	 * READS AMSAT FORMAT
+	 * @param appMain
+	 * @throws Exception
+	 */
+	public Satellite(AppMain appMain) throws Exception {
 
 		String line, token;
 		int EpochYear;
@@ -45,9 +53,9 @@ class Satellite {
 		found = false;
 		// Use the number to get the satellite name
 		while (!found) {
-			if (!AppMain.NOCONSOLE) {
+			if (!AppMain.NOCONSOLE) { // TODO: move console reading up into AppMain
 				try {
-					SatName = System.console().readLine("Letter or satellite name :");
+					SatName =System.console().readLine("Letter or satellite name :");
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
@@ -68,7 +76,7 @@ class Satellite {
 					if (line.startsWith("Satellite: ")) {
 						if ((++i) == Constants.LetterNum(satchar)) {
 							found = true;
-							SatName = line.substring(11);
+							SatName=line.substring(11);
 							break;
 						}
 					}
@@ -101,10 +109,10 @@ class Satellite {
 			throw new Exception();
 		}
 		String s = line.substring(token.length() + 1);
-		EpochDay = Double.parseDouble(s);
-		EpochYear = (int) (EpochDay / 1000.0);
-		EpochDay -= EpochYear * 1000.0;
-		EpochDay += Constants.GetDayNum(EpochYear, 1, 0);
+		double d = Double.parseDouble(s);
+		EpochYear = (int) (d / 1000.0);
+		d -= EpochYear * 1000.0;
+		EpochDay = d + Constants.GetDayNum(EpochYear, 1, 0);
 
 		// TODO? if (sscanf(str,"Element set: %ld",&ElementSet) == 0)
 		// { /* Old style kepler.dat */
@@ -125,8 +133,7 @@ class Satellite {
 		s = line.substring(token.length() + 1);
 		if (s.endsWith(deg))
 			s = s.substring(0, s.length() - deg.length());
-		Inclination = Double.parseDouble(s);
-		Inclination *= Constants.RadiansPerDegree;
+		Inclination = Double.parseDouble(s) * Constants.RadiansPerDegree;
 
 		line = iter.next();
 		token = "RA of node:";
@@ -136,8 +143,7 @@ class Satellite {
 		s = line.substring(token.length() + 1);
 		if (s.endsWith(deg))
 			s = s.substring(0, s.length() - deg.length());
-		EpochRAAN = Double.parseDouble(s);
-		EpochRAAN *= Constants.RadiansPerDegree;
+		EpochRAAN = Double.parseDouble(s) * Constants.RadiansPerDegree;
 
 		line = iter.next();
 		token = "Eccentricity:";
@@ -154,8 +160,7 @@ class Satellite {
 		s = line.substring(token.length() + 1);
 		if (s.endsWith(deg))
 			s = s.substring(0, s.length() - deg.length());
-		EpochArgPerigee = Double.parseDouble(s);
-		EpochArgPerigee *= Constants.RadiansPerDegree;
+		EpochArgPerigee = Double.parseDouble(s) * Constants.RadiansPerDegree;
 
 		line = iter.next();
 		token = "Mean anomaly:";
@@ -165,8 +170,7 @@ class Satellite {
 		s = line.substring(token.length() + 1);
 		if (s.endsWith(deg))
 			s = s.substring(0, s.length() - deg.length());
-		EpochMeanAnomaly = Double.parseDouble(s);
-		EpochMeanAnomaly *= Constants.RadiansPerDegree;
+		EpochMeanAnomaly = Double.parseDouble(s) * Constants.RadiansPerDegree;
 
 		line = iter.next();
 		token = "Mean motion:";
@@ -263,6 +267,31 @@ class Satellite {
 		}
 	}
 	
+
+    /* 	DECODE 2-LINE ELSETS WITH THE FOLLOWING KEY:
+     *	1 AAAAAU 00  0  0 BBBBB.BBBBBBBB  .CCCCCCCC  00000-0  00000-0 0  DDDZ
+     *	2 AAAAA EEE.EEEE FFF.FFFF GGGGGGG HHH.HHHH III.IIII JJ.JJJJJJJJKKKKKZ
+	 *	KEY: A-CATALOGNUM B-EPOCHTIME C-DECAY D-ELSETNUM E-INCLINATION F-RAAN
+	 *	G-ECCENTRICITY H-ARGPERIGEE I-MNANOM J-MNMOTION K-ORBITNUM Z-CHECKSUM
+     */
+	public Satellite(String line0, String line1, String line2) {
+		SatName=line0;
+		if (line1.charAt(0)!='1' || line2.charAt(0)!='2') throw new IllegalArgumentException("Keps incorrectly formatted:\n"+line0+"\n"+line1+"\n"+line2);
+		
+		Integer catalogNum = Integer.parseInt(line1.substring(2,6).trim()); //A
+		EpochDay = Double.parseDouble(line1.substring(18,31).trim()); // B
+		OrbitalDecay = Double.parseDouble(line1.substring(33,42).trim()); // C
+		ElementSet = Integer.parseInt(line1.substring(65,67).trim()); // D
+		
+		Inclination = Double.parseDouble(line2.substring(8,15).trim()); // E
+		EpochRAAN = Double.parseDouble(line2.substring(17,24).trim()); // F
+		Eccentricity = Double.parseDouble(line2.substring(26,32).trim()); // G
+		EpochArgPerigee = Double.parseDouble(line2.substring(34,41).trim()); // H
+		EpochMeanAnomaly = Double.parseDouble(line2.substring(43,50).trim()); // I
+		epochMeanMotion = Double.parseDouble(line2.substring(52,62).trim()); // J
+		EpochOrbitNum = Integer.parseInt(line2.substring(63,67).trim()); // K
+	}
+
 	void PrintMode(PrintStream OutFile, double Phase) {
 		int CurMode;
 
@@ -370,4 +399,16 @@ class Satellite {
 
 		return NumSatellites;
 	}
+	
+	@Override
+	public String toString() {
+		return "Satellite [BeaconFreq=" + BeaconFreq + ", SatName=" + SatName + ", EpochDay=" + EpochDay
+				+ ", EpochMeanAnomaly=" + EpochMeanAnomaly + ", EpochOrbitNum=" + EpochOrbitNum + ", EpochRAAN="
+				+ EpochRAAN + ", epochMeanMotion=" + epochMeanMotion + ", OrbitalDecay=" + OrbitalDecay
+				+ ", EpochArgPerigee=" + EpochArgPerigee + ", Eccentricity=" + Eccentricity + ", Inclination="
+				+ Inclination + ", ElementSet=" + ElementSet + ", MaxPhase=" + MaxPhase + ", perigeePhase="
+				+ perigeePhase + ", NumModes=" + NumModes + ", Modes=" + Arrays.toString(Modes) + ", PrintApogee="
+				+ PrintApogee + "]";
+	}
+
 }
