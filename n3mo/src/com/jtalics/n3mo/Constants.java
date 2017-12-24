@@ -1,4 +1,4 @@
-package n3mo;
+package com.jtalics.n3mo;
 
 import java.io.File;
 import java.io.FileNotFoundException;

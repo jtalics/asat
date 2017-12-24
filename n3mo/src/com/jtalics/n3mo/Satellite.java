@@ -1,4 +1,4 @@
-package n3mo;
+package com.jtalics.n3mo;
 
 import java.io.File;
 import java.io.IOException;
@@ -7,7 +7,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
 
-import n3mo.AppMain.ModeRec;
+import com.jtalics.n3mo.AppMain.ModeRec;
 
 class Satellite {
 
