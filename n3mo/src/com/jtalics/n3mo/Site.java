@@ -7,18 +7,22 @@ import java.util.List;
 
 class Site {
 	/* Site Parameters */
-	String SiteName;
-	double SiteLat, SiteLong, SiteAltitude, SiteMinElev;
-	boolean PrintEclipses;
-	boolean Flip;
-
+	public String SiteName;
+	public double SiteLat, SiteLong, SiteAltitude, SiteMinElev;
+	public boolean PrintEclipses;
+	public boolean Flip;
+	double X;
+	double Y;
+	double Z;
+	double VX;
+	double VY;
 
 	Site() throws IOException {
 
 		String line;
 		String name = "zerobuoy.sit";
 
-		if (!AppMain.NOCONSOLE) {
+		if (!N3mo.NOCONSOLE) {
 			name = System.console().readLine("Site name :").trim() + ".sit";
 		}
 		List<String> lines = Constants.getLines(new File(name));
@@ -71,17 +75,13 @@ class Site {
 	 * Returns double[]={SiteX,SiteY,SiteZ,SiteVX,SiteVY,} and modifies SiteMatrix
 	 */
 
-	double[] GetSitPosition(SolarKeps solarKeps, double SiteLat, double SiteLong, double SiteElevation, double CurrentTime,
-			double[][] SiteMatrix) {
+	void calcPosVel(Sun solarKeps, double CurrentTime, double[][] SiteMatrix) {
 
 		double G1, G2; /* Used to correct for flattening of the Earth */
 		double CosLat, SinLat;
-		// double OldSiteLat = -100000; /* Used to avoid unneccesary recomputation */
-		// double OldSiteElevation = -100000;
 		double Lat;
 		double SiteRA; /* Right Ascension of site */
 		double CosRA, SinRA;
-		double[] retval = new double[5]; // SiteX,SiteY,SiteZ,SiteVX,SiteVY,
 
 		// if ((SiteLat != OldSiteLat) || (SiteElevation != OldSiteElevation)) {
 		// OldSiteLat = SiteLat;
@@ -93,19 +93,19 @@ class Site {
 
 		G1 = Constants.EarthRadius / (Math.sqrt(1 - (2 * Constants.EarthFlat - (Constants.EarthFlat * Constants.EarthFlat)) * (SinLat * SinLat)));
 		G2 = G1 * ((1 - Constants.EarthFlat) * (1 - Constants.EarthFlat));
-		G1 += SiteElevation;
-		G2 += SiteElevation;
+		G1 += SiteAltitude;
+		G2 += SiteAltitude;
 		// }
 
-		SiteRA = Constants.PI2 * ((CurrentTime - solarKeps.SidDay) * SolarKeps.SiderealSolar + solarKeps.SidReference) - SiteLong;
+		SiteRA = Constants.PI2 * ((CurrentTime - solarKeps.SidDay) * Sun.SiderealSolar + solarKeps.SidReference) - SiteLong;
 		CosRA = Math.cos(SiteRA);
 		SinRA = Math.sin(SiteRA);
 
-		retval[0] = G1 * CosLat * CosRA;
-		retval[1] = G1 * CosLat * SinRA;
-		retval[2] = G2 * SinLat;
-		retval[3] = -SolarKeps.SidRate * retval[1];
-		retval[4] = SolarKeps.SidRate * retval[0];
+		X = G1 * CosLat * CosRA;
+		Y = G1 * CosLat * SinRA;
+		Z = G2 * SinLat;
+		VX = -Sun.SidRate * Y; // TODO double check, orig could be bad
+		VY = Sun.SidRate * X;
 
 		SiteMatrix[0][0] = SinLat * CosRA;
 		SiteMatrix[0][1] = SinLat * SinRA;
@@ -116,8 +116,6 @@ class Site {
 		SiteMatrix[2][0] = CosRA * CosLat;
 		SiteMatrix[2][1] = SinRA * CosLat;
 		SiteMatrix[2][2] = SinLat;
-
-		return retval;
 	}
 
 

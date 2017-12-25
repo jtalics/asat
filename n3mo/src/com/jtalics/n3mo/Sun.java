@@ -1,6 +1,7 @@
 package com.jtalics.n3mo;
 
-class SolarKeps {
+// The sun is considered a satellite of the earth -- should we extend Satellite then?
+class Sun {
 
 	/*
 	 * Initialize the Sun's keplerian elements for a given epoch. Formulas are from
@@ -20,7 +21,7 @@ class SolarKeps {
 	final static double SiderealSolar = 1.0027379093;
 	final static double SidRate = (Constants.PI2 * SiderealSolar / Constants.SecondsPerDay); /* radians/second */
 
-	SolarKeps(double EpochDay) {
+	Sun(final double EpochDay) {
 		double T, T2, T3, Omega;
 		int n;
 		double SunTrueAnomaly, SunDistance;
@@ -64,6 +65,20 @@ class SolarKeps {
 	long calls = 0;
 	long iters = 0;
 
+	double radius;
+
+	private double X;
+
+	private double Y;
+
+	private double Z;
+
+	private double VX;
+
+	private double VY;
+
+	private double VZ;
+
 	/* Solve Kepler's equation */
 	/* Inputs: */
 	/* MeanAnomaly Time Since last perigee, in radians. */
@@ -98,26 +113,70 @@ class SolarKeps {
 		return TrueAnomaly;
 	}
 
-	boolean Eclipsed(double SatX, double SatY, double SatZ, double SatRadius, double CurrentTime) {
+	boolean Eclipsed(Satellite sat, double CurrentTime) {
 		double MeanAnomaly, TrueAnomaly;
-		// double SunX,SunY,SunZ,SunRad;
-		// double vx,vy,vz;
 		double CosTheta;
 
 		MeanAnomaly = SunMeanAnomaly + (CurrentTime - SunEpochTime) * SunMeanMotion * Constants.PI2;
 		TrueAnomaly = Kepler(MeanAnomaly, SunEccentricity);
 
-		double[] sun = Satellite.GetSatPosition(SunEpochTime, SunRAAN, SunArgPerigee, SunSemiMajorAxis, SunInclination,
-				SunEccentricity, 0.0, 0.0, CurrentTime, TrueAnomaly); // sun = {SunX,SunY,SunZ,SunRad,vx,vy,vz}
+		calcPosVel(SunSemiMajorAxis, 0.0, 0.0, CurrentTime, TrueAnomaly); // sun = {SunX,SunY,SunZ,SunRad,vx,vy,vz}
 
-		CosTheta = (sun[0] * SatX + sun[1] * SatY + sun[3] * SatZ) / (sun[4] * SatRadius) * CosPenumbra
-				+ (SatRadius / Constants.EarthRadius) * SinPenumbra;
+		CosTheta = (X * sat.X + Y * sat.Y + Z * sat.Z) / (radius * sat.radius) * CosPenumbra
+				+ (sat.radius / Constants.EarthRadius) * SinPenumbra;
 
 		if (CosTheta < 0)
-			if (CosTheta < -Math.sqrt((SatRadius * SatRadius) - (Constants.EarthRadius * Constants.EarthRadius))
-					/ SatRadius * CosPenumbra + (SatRadius / Constants.EarthRadius) * SinPenumbra)
+			if (CosTheta < -Math.sqrt((sat.radius * sat.radius) - (Constants.EarthRadius * Constants.EarthRadius))
+					/ sat.radius * CosPenumbra + (sat.radius / Constants.EarthRadius) * SinPenumbra)
 
 				return true;
 		return false;
+	}
+	
+	/*
+	 * Compute the satellite postion and velocity in the RA based coordinate system,
+	 * returns array: double[7] {X,Y,Z,Radius,VX,VY,VZ;}
+	 */
+	private void calcPosVel(double SemiMajorAxis, double RAANPrecession, double PerigeePrecession, double Time, double TrueAnomaly) {
+
+		double RAAN, ArgPerigee;
+		double Xw, Yw, VXw, VYw; /* In orbital plane */
+
+		radius = SemiMajorAxis * (1 - (SunEccentricity * SunEccentricity)) / (1 + SunEccentricity * Math.cos(TrueAnomaly));
+		Xw = radius * Math.cos(TrueAnomaly);
+		Yw = radius * Math.sin(TrueAnomaly);
+
+		double Tmp = Math.sqrt(Constants.GM / (SemiMajorAxis * (1 - (SunEccentricity * SunEccentricity))));
+
+		VXw = -Tmp * Math.sin(TrueAnomaly);
+		VYw = Tmp * (Math.cos(TrueAnomaly) + SunEccentricity);
+
+		ArgPerigee = SunArgPerigee + (Time - SunEpochTime) * PerigeePrecession;
+		RAAN = SunRAAN - (Time - SunEpochTime) * RAANPrecession;
+
+		double CosArgPerigee, SinArgPerigee;
+		double CosRAAN, SinRAAN, CoSinclination, SinInclination;
+		CosRAAN = Math.cos(RAAN);
+		SinRAAN = Math.sin(RAAN);
+		CosArgPerigee = Math.cos(ArgPerigee);
+		SinArgPerigee = Math.sin(ArgPerigee);
+		CoSinclination = Math.cos(SunInclination);
+		SinInclination = Math.sin(SunInclination);
+
+		double Px, Qx, Py, Qy, Pz, Qz; /* Escobal transformation 31 */
+		Px = CosArgPerigee * CosRAAN - SinArgPerigee * SinRAAN * CoSinclination;
+		Py = CosArgPerigee * SinRAAN + SinArgPerigee * CosRAAN * CoSinclination;
+		Pz = SinArgPerigee * SinInclination;
+		Qx = -SinArgPerigee * CosRAAN - CosArgPerigee * SinRAAN * CoSinclination;
+		Qy = -SinArgPerigee * SinRAAN + CosArgPerigee * CosRAAN * CoSinclination;
+		Qz = CosArgPerigee * SinInclination;
+
+		X = Px * Xw + Qx * Yw; /* Escobal, transformation #31 */
+		Y = Py * Xw + Qy * Yw;
+		Z = Pz * Xw + Qz * Yw;
+
+		VX = Px * VXw + Qx * VYw;
+		VY = Py * VXw + Qy * VYw;
+		VZ = Pz * VXw + Qz * VYw;
 	}
 }

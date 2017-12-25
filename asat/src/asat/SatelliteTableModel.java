@@ -6,9 +6,9 @@ import com.jtalics.n3mo.Satellite;
 
 public class SatelliteTableModel extends AbstractTableModel {
 
-	private AppMain app;
+	private Asat app;
 
-	SatelliteTableModel(AppMain app) {
+	SatelliteTableModel(Asat app) {
 		this.app = app;
 	}
 	
@@ -25,20 +25,20 @@ public class SatelliteTableModel extends AbstractTableModel {
 
 	@Override
 	public Object getValueAt(int rowIndex, int columnIndex) {
-		Satellite sat = app.satellites.get(rowIndex);
+		Satellite sat = getSatelliteAt(rowIndex);
 		switch(columnIndex) {
 		case 0:
 			return sat.SatName;
 		case 1:
-			return sat.EpochDay;
+			return sat.EpochTime;
 		case 2:
-			return sat.Inclination;
+			return sat.Inclination; // i
 		case 3:
-			return sat.EpochRAAN;
+			return sat.EpochRAAN; // TODO: big omega
 		case 4:
 			return sat.Eccentricity;
 		case 5:
-			return sat.EpochArgPerigee;
+			return sat.EpochArgPerigee; // little omega
 		case 6:
 			return sat.epochMeanMotion;
 		case 7:
@@ -46,5 +46,9 @@ public class SatelliteTableModel extends AbstractTableModel {
 		default:
 			throw new RuntimeException();
 		}
+	}
+
+	Satellite getSatelliteAt(int rowIndex) {
+		return app.satellites.get(rowIndex);
 	}
 }

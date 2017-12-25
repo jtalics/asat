@@ -8,52 +8,64 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
 
-import com.jtalics.n3mo.AppMain.ModeRec;
+import com.jtalics.n3mo.Ephemeris.Frame;
 
+// LOADS & STORES THE KEPS, ETC.
 public class Satellite {
 
-	public String SatName;// = "k"; // ISS for example // TODO - make finalS
-	/* Keplerian Elements*/
-	// https://marine.rutgers.edu/cool/education/class/paul/orbits.html
-	public final double EpochDay; /* time of epoch */
-	public final double Inclination;
-	public final double EpochRAAN; /* RAAN at epoch */
-	public final double Eccentricity;
-	public final double EpochArgPerigee; /* argument of perigee at epoch */
-	public final double epochMeanMotion; /* Revolutions/day */
-	public final double EpochMeanAnomaly; /* Mean Anomaly at epoch */
+	public String SatName = "k"; // ISS for example // TODO - make final
+	// Keplerian Elements: https://marine.rutgers.edu/cool/education/class/paul/orbits.html
+	public final double EpochTime; /* time of epoch */ //The first thing you need to define an orbit is the time at which the Keplerian Elements were defined. You need a snapshot of where and how fast the satellite was going.
+	public final double Inclination; //This element tells you what the angle is between the equator and the orbit when looking from the center of the Earth. If the orbit went exactly around the equator from left to right, then the inclination would be 0. The inclination ranges from 0 to 180 degrees.
+	public final double EpochRAAN; /* RAAN at epoch */ // This is probably one of the most difficult of the elements to describe. The ascending node is the place where the satellite crosses the equator while going from the Southern Hemisphere to the Northern Hemisphere. Now since the Earth rotates, you need to specify a fixed object in space. We use Aries (this is also the same location as the vernal equinox). The angle, from the center of the Earth, between Aries and the ascending node is called the right ascension of ascending node.
+	public final double Eccentricity; // The eccentricity tells you how flat the orbit is. If the orbit is a perfect circle, then the eccentricity is 0. When the eccentricity is close to 1, then the orbit is very flat. 
+	public final double EpochArgPerigee; /* argument of perigee at epoch */ // Since an orbit usually has an elliptical shape, the satellite will be closer to the Earth at one point than at another. The point where the satellite is the closest to the Earth is called the perigee. The point where the satellite is the furthest from the Earth is called the apogee. The argument of perigee is the angle formed between the perigee and the ascending node. If the perigee would occur at the ascending node, the argument of perigee would be 0.
+	public final double epochMeanMotion; /* Revolutions/day */ // The mean motion tells you how fast the satellite is going. According to Kepler's Law: v=(G*M)/r so as the satellite gets closer to the Earth, its velocity increases. If we know how fast the satellite is going, we also know the altitude of the satellite.
+	public final double EpochMeanAnomaly; /* Mean Anomaly at epoch */ // The mean anomaly tells you where the satellite is in its orbital path. The mean anomaly ranges from 0 to 360 degrees. The mean anomaly is referenced to the perigee. If the satellite were at the perigee, the mean anomaly would be 0.
 	// and misc. data for the satellite 
 	public final long EpochOrbitNum; /* Integer orbit # of epoch */
 	public final double OrbitalDecay; /* Revolutions/day^2 */
 	public final int ElementSet;
 	public double BeaconFreq; /* Mhz, used for doppler calc */
-	double MaxPhase; /* Phase units in 1 orbit */
-	double perigeePhase;
-	int NumModes;
-	ModeRec[] Modes = new ModeRec[AppMain.MaxModes];
-	boolean PrintApogee = false;
+	public double MaxPhase; /* Phase units in 1 orbit */
+	public double perigeePhase;
+	public int NumModes;
+	final int MaxModes = 10;
+	public class ModeRec {
+		int MinPhase, MaxPhase;
+		String ModeStr;
+	}
+	public ModeRec[] Modes = new ModeRec[MaxModes];
+	public boolean PrintApogee = false;
+	double radius;
+	double X;
+	double Y;
+	double Z;
+	double VX;
+	double VY;
+	double VZ;
+	private double RAANPrecession;
+	private double PerigeePrecession;
 	
 	/**
 	 * READS AMSAT FORMAT
-	 * @param appMain
-	 * @throws Exception
 	 */
-	public Satellite(AppMain appMain) throws Exception {
+	public Satellite(N3mo appMain, File infile) throws Exception {
 
 		String line, token;
 		int EpochYear;
 		boolean found;
-		int i, NumSatellites;
+		int i;
 		char satchar;
 
-		NumSatellites = ListSatellites();
+		int NumSatellites = ListSatellites();
 
-		List<String> lines = Constants.getLines(new File("kepler.dat"));
+		List<String> lines = Constants.getLines(infile);
 		Iterator<String> iter = lines.iterator();
 		found = false;
 		// Use the number to get the satellite name
 		while (!found) {
-			if (!AppMain.NOCONSOLE) { // TODO: move console reading up into AppMain
+			if (!N3mo.NOCONSOLE) { // TODO: move console reading up into AppMain
 				try {
 					SatName =System.console().readLine("Letter or satellite name :");
 				} catch (Exception ex) {
@@ -112,10 +124,8 @@ public class Satellite {
 		double d = Double.parseDouble(s);
 		EpochYear = (int) (d / 1000.0);
 		d -= EpochYear * 1000.0;
-		EpochDay = d + Constants.GetDayNum(EpochYear, 1, 0);
+		EpochTime = d + Constants.GetDayNum(EpochYear, 1, 0);
 
-		// TODO? if (sscanf(str,"Element set: %ld",&ElementSet) == 0)
-		// { /* Old style kepler.dat */
 		line = iter.next();
 		token = "Element set:";
 		if (!line.startsWith(token)) {
@@ -259,12 +269,13 @@ public class Satellite {
 				Modes[NumModes].MinPhase = scanner.nextInt();
 				Modes[NumModes].MaxPhase = scanner.nextInt();
 				scanner.close();
-				if (NumModes >= AppMain.MaxModes) {
+				if (NumModes >= MaxModes) {
 					throw new Exception();
 				}
 				NumModes++;
 			}
 		}
+		calcPrecession();
 	}
 	
 
@@ -279,7 +290,7 @@ public class Satellite {
 		if (line1.charAt(0)!='1' || line2.charAt(0)!='2') throw new IllegalArgumentException("Keps incorrectly formatted:\n"+line0+"\n"+line1+"\n"+line2);
 		
 		Integer catalogNum = Integer.parseInt(line1.substring(2,6).trim()); //A
-		EpochDay = Double.parseDouble(line1.substring(18,31).trim()); // B
+		EpochTime = Double.parseDouble(line1.substring(18,31).trim()); // B
 		OrbitalDecay = Double.parseDouble(line1.substring(33,42).trim()); // C
 		ElementSet = Integer.parseInt(line1.substring(65,67).trim()); // D
 		
@@ -290,32 +301,18 @@ public class Satellite {
 		EpochMeanAnomaly = Double.parseDouble(line2.substring(43,50).trim()); // I
 		epochMeanMotion = Double.parseDouble(line2.substring(52,62).trim()); // J
 		EpochOrbitNum = Integer.parseInt(line2.substring(63,67).trim()); // K
+		calcPrecession();
 	}
 
-	void PrintMode(PrintStream OutFile, double Phase) {
-		int CurMode;
-
-		for (CurMode = 0; CurMode < NumModes; CurMode++) {
-			if ((Phase >= Modes[CurMode].MinPhase && Phase < Modes[CurMode].MaxPhase)
-					|| ((Modes[CurMode].MinPhase > Modes[CurMode].MaxPhase)
-							&& (Phase >= Modes[CurMode].MinPhase || Phase < Modes[CurMode].MaxPhase))) {
-				OutFile.print(Modes[CurMode].ModeStr + " ");
-			}
-		}
-	}
-
-	// returns double[2]={RAANPrecession,PerigeePrecession}
-	double[] GetPrecession(double Eccentricity, double Inclination) {
+	private void calcPrecession() {
 		double SemiMajorAxis = 331.25 * Math.exp(2 * Math.log(Constants.MinutesPerDay / epochMeanMotion) / 3);
 
-		double[] retval = new double[2]; // RAANPrecession,PerigeePrecession
-		retval[0] = 9.95 * Math.pow(Constants.EarthRadius / SemiMajorAxis, 3.5) * Math.cos(Inclination)
+		RAANPrecession = 9.95 * Math.pow(Constants.EarthRadius / SemiMajorAxis, 3.5) * Math.cos(Inclination)
 				/ ((1 - (Eccentricity * Eccentricity)) * (1 - (Eccentricity * Eccentricity))) * Constants.RadiansPerDegree;
 
-		retval[1] = 4.97 * Math.pow(Constants.EarthRadius / SemiMajorAxis, 3.5)
+		PerigeePrecession = 4.97 * Math.pow(Constants.EarthRadius / SemiMajorAxis, 3.5)
 				* (5 * ((Math.cos(Inclination)) * (Math.cos(Inclination))) - 1)
 				/ ((1 - (Eccentricity * Eccentricity)) * (1 - (Eccentricity * Eccentricity))) * Constants.RadiansPerDegree;
-		return retval;
 	}
 
 	/*
@@ -323,25 +320,16 @@ public class Satellite {
 	 * returns array: double[7] {X,Y,Z,Radius,VX,VY,VZ;}
 	 */
 
-	static double[] GetSatPosition(double EpochTime, double EpochRAAN, double EpochArgPerigee, double SemiMajorAxis,
-			double Inclination, double Eccentricity, double RAANPrecession, double PerigeePrecession, double Time,
-			double TrueAnomaly) {
+	void calcPosVel(double SemiMajorAxis, double Time, double TrueAnomaly) {
 
 		double RAAN, ArgPerigee;
-
 		double Xw, Yw, VXw, VYw; /* In orbital plane */
-		double Tmp;
-		double Px, Qx, Py, Qy, Pz, Qz; /* Escobal transformation 31 */
-		double CosArgPerigee, SinArgPerigee;
-		double CosRAAN, SinRAAN, CoSinclination, SinInclination;
-		double[] retval = new double[7];
 
-		retval[3] = SemiMajorAxis * (1 - (Eccentricity * Eccentricity)) / (1 + Eccentricity * Math.cos(TrueAnomaly));
+		radius = SemiMajorAxis * (1 - (Eccentricity * Eccentricity)) / (1 + Eccentricity * Math.cos(TrueAnomaly));
+		Xw = radius * Math.cos(TrueAnomaly);
+		Yw = radius * Math.sin(TrueAnomaly);
 
-		Xw = retval[3] * Math.cos(TrueAnomaly);
-		Yw = retval[3] * Math.sin(TrueAnomaly);
-
-		Tmp = Math.sqrt(Constants.GM / (SemiMajorAxis * (1 - (Eccentricity * Eccentricity))));
+		double Tmp = Math.sqrt(Constants.GM / (SemiMajorAxis * (1 - (Eccentricity * Eccentricity))));
 
 		VXw = -Tmp * Math.sin(TrueAnomaly);
 		VYw = Tmp * (Math.cos(TrueAnomaly) + Eccentricity);
@@ -349,6 +337,8 @@ public class Satellite {
 		ArgPerigee = EpochArgPerigee + (Time - EpochTime) * PerigeePrecession;
 		RAAN = EpochRAAN - (Time - EpochTime) * RAANPrecession;
 
+		double CosArgPerigee, SinArgPerigee;
+		double CosRAAN, SinRAAN, CoSinclination, SinInclination;
 		CosRAAN = Math.cos(RAAN);
 		SinRAAN = Math.sin(RAAN);
 		CosArgPerigee = Math.cos(ArgPerigee);
@@ -356,6 +346,7 @@ public class Satellite {
 		CoSinclination = Math.cos(Inclination);
 		SinInclination = Math.sin(Inclination);
 
+		double Px, Qx, Py, Qy, Pz, Qz; /* Escobal transformation 31 */
 		Px = CosArgPerigee * CosRAAN - SinArgPerigee * SinRAAN * CoSinclination;
 		Py = CosArgPerigee * SinRAAN + SinArgPerigee * CosRAAN * CoSinclination;
 		Pz = SinArgPerigee * SinInclination;
@@ -363,16 +354,15 @@ public class Satellite {
 		Qy = -SinArgPerigee * SinRAAN + CosArgPerigee * CosRAAN * CoSinclination;
 		Qz = CosArgPerigee * SinInclination;
 
-		retval[0] = Px * Xw + Qx * Yw; /* Escobal, transformation #31 */
-		retval[1] = Py * Xw + Qy * Yw;
-		retval[2] = Pz * Xw + Qz * Yw;
+		X = Px * Xw + Qx * Yw; /* Escobal, transformation #31 */
+		Y = Py * Xw + Qy * Yw;
+		Z = Pz * Xw + Qz * Yw;
 
-		retval[4] = Px * VXw + Qx * VYw;
-		retval[5] = Py * VXw + Qy * VYw;
-		retval[6] = Pz * VXw + Qz * VYw;
-
-		return retval;
+		VX = Px * VXw + Qx * VYw;
+		VY = Py * VXw + Qy * VYw;
+		VZ = Pz * VXw + Qz * VYw;
 	}
+	
 	/* List the satellites in kepler.dat, and return the number found */
 	private int ListSatellites() throws IOException {
 		char satchar;
@@ -400,9 +390,22 @@ public class Satellite {
 		return NumSatellites;
 	}
 	
+	void PrintMode(PrintStream OutFile, double Phase, Frame frame) {
+		int CurMode;
+
+		for (CurMode = 0; CurMode < NumModes; CurMode++) {
+			if ((Phase >= Modes[CurMode].MinPhase && Phase < Modes[CurMode].MaxPhase)
+					|| ((Modes[CurMode].MinPhase > Modes[CurMode].MaxPhase)
+							&& (Phase >= Modes[CurMode].MinPhase || Phase < Modes[CurMode].MaxPhase))) {
+				frame.modes[CurMode] = Modes[CurMode].ModeStr;
+				OutFile.print(Modes[CurMode].ModeStr + " ");
+			}
+		}
+	}
+
 	@Override
 	public String toString() {
-		return "Satellite [BeaconFreq=" + BeaconFreq + ", SatName=" + SatName + ", EpochDay=" + EpochDay
+		return "Satellite [BeaconFreq=" + BeaconFreq + ", SatName=" + SatName + ", EpochDay=" + EpochTime
 				+ ", EpochMeanAnomaly=" + EpochMeanAnomaly + ", EpochOrbitNum=" + EpochOrbitNum + ", EpochRAAN="
 				+ EpochRAAN + ", epochMeanMotion=" + epochMeanMotion + ", OrbitalDecay=" + OrbitalDecay
 				+ ", EpochArgPerigee=" + EpochArgPerigee + ", Eccentricity=" + Eccentricity + ", Inclination="
