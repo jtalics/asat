@@ -1,4 +1,4 @@
-package asat;
+package com.jtalics.asat.satellite;
 
 import java.awt.Component;
 
@@ -6,7 +6,7 @@ import javax.swing.JLabel;
 import javax.swing.JTable;
 import javax.swing.table.TableCellRenderer;
 
-final class SatelliteTableCellRenderer implements TableCellRenderer {
+public final class SatelliteTableCellRenderer implements TableCellRenderer {
 	@Override
 	public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
 			boolean hasFocus, int row, int col) {

@@ -1,23 +1,27 @@
-package asat;
+package com.jtalics.asat.ephemeris;
 
 import java.awt.BorderLayout;
-import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 import javax.swing.JButton;
 import javax.swing.JDialog;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 
+import com.jtalics.asat.Asat;
 import com.jtalics.n3mo.Satellite;
+import com.jtalics.n3mo.Site;
 
-public class SatelliteDialog extends JDialog {
-	Asat app;
-	Satellite sat;
-	public SatelliteDialog(Asat app, Satellite sat) {
+public class EphemerisDialog extends JDialog {
+	
+	private final Asat app;
+	private final Satellite satellite;
+	private final Site site;
+	
+	public EphemerisDialog(Asat app, Site site, Satellite sat) {
 		this.app = app;
-		this.sat = sat;
+		this.site = site;
+		this.satellite = sat;
 		setModal(false);
 		add(getTopPanel());
 		setTitle(sat.SatName);
@@ -39,7 +43,7 @@ public class SatelliteDialog extends JDialog {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				app.calcEphemeris(sat);
+				app.calcEphemeris(site, satellite);
 			}
 			
 		});

@@ -5,19 +5,18 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 
-class Site {
+public class Site {
 	/* Site Parameters */
 	public String SiteName;
-	public double SiteLat, SiteLong, SiteAltitude, SiteMinElev;
-	public boolean PrintEclipses;
-	public boolean Flip;
+	public double SiteLat, SiteLong, SiteAltitude;
+
 	double X;
 	double Y;
 	double Z;
 	double VX;
 	double VY;
 
-	Site() throws IOException {
+	public Site() throws IOException {
 
 		String line;
 		String name = "zerobuoy.sit";
@@ -118,5 +117,20 @@ class Site {
 		SiteMatrix[2][2] = SinLat;
 	}
 
+	//TODO: move these Ephemeris
+	private boolean Flip;
+	private double SiteMinElev;
+	private boolean PrintEclipses;
+	
+	public boolean isFlip() {
+		return Flip;
+	}
 
+	public double getSiteMinElev() {
+		return SiteMinElev;
+	}
+
+	public boolean isPrintEclipses() {
+		return PrintEclipses;
+	}
 }

@@ -4,9 +4,10 @@ import java.io.File;
 import java.io.PrintStream;
 
 public class N3mo {
-	static boolean NOCONSOLE = false;
-	static PrintStream outPrintStream;
+	static boolean NOCONSOLE = true;
+	static PrintStream outPrintStream = System.out;
 
+	// RUN FROM CONSOLE
 	public static void main(String[] args) throws Exception {
 
 		if (System.console() == null) {
@@ -14,12 +15,11 @@ public class N3mo {
 			// throw new Exception("Cannot open a console");
 		}
 		System.out.println("Current directory is " + System.getProperty("user.dir"));
-		N3mo n3mo = new N3mo();
 		String FileName = null;
 
 		System.out.println(Constants.VersionStr);
 
-		Satellite satellite = new Satellite(n3mo,new File("kepler.dat"));
+		Satellite satellite = new Satellite(new File("kepler.dat"));
 		Site site = new Site();
 		Ephemeris ephemeris = new Ephemeris(site, satellite);
 
@@ -29,9 +29,8 @@ public class N3mo {
 		if (FileName == null || FileName.length() > 0) {
 			File file = new File(FileName, satellite.SatName + ".eph");
 			outPrintStream = new PrintStream(file);
-		} else
-			outPrintStream = System.out;
-
+		}
+		
 		outPrintStream.println(satellite.SatName + " Element Set " + satellite.ElementSet);
 
 		outPrintStream.println(site.SiteName);
@@ -41,5 +40,12 @@ public class N3mo {
 		ephemeris.calc();
 		
 		outPrintStream.close();
+	}
+
+	public static Ephemeris calcEphemeris(Site site, Satellite satellite) {
+
+		Ephemeris ephemeris = new Ephemeris(site, satellite);
+		ephemeris.calc();
+		return ephemeris;
 	}
 }

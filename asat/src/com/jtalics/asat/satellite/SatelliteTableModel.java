@@ -1,21 +1,25 @@
-package asat;
+package com.jtalics.asat.satellite;
+
+import java.util.List;
 
 import javax.swing.table.AbstractTableModel;
 
+import com.jtalics.asat.Asat;
 import com.jtalics.n3mo.Satellite;
 
 public class SatelliteTableModel extends AbstractTableModel {
 
-	private Asat app;
 
-	SatelliteTableModel(Asat app) {
-		this.app = app;
+	private List<Satellite> satellites;
+
+	public SatelliteTableModel(List<Satellite> satellites) {
+		this.satellites = satellites;
 	}
 	
 	@Override
 	public int getRowCount() {
-		// TODO Auto-generated method stub
-		return app.satellites.size();
+		
+		return satellites.size();
 	}
 
 	@Override
@@ -49,6 +53,6 @@ public class SatelliteTableModel extends AbstractTableModel {
 	}
 
 	Satellite getSatelliteAt(int rowIndex) {
-		return app.satellites.get(rowIndex);
+		return satellites.get(rowIndex);
 	}
 }

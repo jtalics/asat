@@ -50,7 +50,7 @@ public class Satellite {
 	/**
 	 * READS AMSAT FORMAT
 	 */
-	public Satellite(N3mo appMain, File infile) throws Exception {
+	public Satellite(File infile) throws Exception {
 
 		String line, token;
 		int EpochYear;

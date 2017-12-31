@@ -63,7 +63,6 @@ class Sun {
 	}
 
 	long calls = 0;
-	long iters = 0;
 
 	double radius;
 
@@ -93,13 +92,17 @@ class Sun {
 		double TrueAnomaly;
 
 		calls++;
+		long iters = 0;
 
 		E = MeanAnomaly;/* + Eccentricity*sin(MeanAnomaly); /* Initial guess */
 		do {
 			Error = (E - Eccentricity * Math.sin(E) - MeanAnomaly) / (1 - Eccentricity * Math.cos(E));
 			E -= Error;
 			iters++;
-		} while (Math.abs(Error) >= Epsilon);
+		} while (Math.abs(Error) >= Epsilon && iters < 1000);
+		if (iters >=1000) {
+			throw new RuntimeException("Sun.Kepler failed on iters");
+		}
 
 		if (Math.abs(E - Math.PI) < Epsilon) {
 			TrueAnomaly = Math.PI;

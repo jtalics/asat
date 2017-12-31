@@ -15,6 +15,10 @@ public class Ephemeris {
 	public Site site;
 	public Satellite satellite;
 
+	public double SiteMinElev;    // ignore satellites below this angular elevation in the sky, 0.0 = horizon
+	public boolean PrintEclipses; // is satellite eclipsing sun?
+	public boolean Flip;  // print flipped angles for special hardware
+	
 	public class Frame { // like one frame in a movie
 
 		Frame(int numModes) {
@@ -39,11 +43,27 @@ public class Ephemeris {
 
 	public List<Frame> frames = new ArrayList<>();
 
+	// READ FROM CONSOLE
 	Ephemeris(Site site, Satellite satellite) {
 		this.site = site;
 		this.satellite = satellite;
+		// TODO: remove next three lines, store them directly in this class
+		this.SiteMinElev = site.getSiteMinElev();
+		this.Flip = site.isFlip();
+		this.PrintEclipses = site.isPrintEclipses();	
+		
 		GetSimulationParams();
 	}
+
+	// BACKING OBJECT FOR ASAT
+	public Ephemeris() {
+		// TODO: remove next three lines, store them directly in this class
+		this.SiteMinElev = 0.0;
+		this.Flip = true;
+		this.PrintEclipses = true;
+		GetSimulationParams();
+	}
+	
 	void GetSimulationParams() {
 
 		int Month, Day, Year;
@@ -76,8 +96,9 @@ public class Ephemeris {
 		StepTime = Double.parseDouble(line) / Constants.MinutesPerDay;
 	}
 
-	void calc() {
+	public boolean calc() {
 
+		if (satellite == null || site == null ) {return false;}
 		Bearing bearing = new Bearing();
 		Range range = new Range();
 		Sun sun = new Sun((StartTime + EndTime) / 2);
@@ -96,7 +117,6 @@ public class Ephemeris {
 		boolean DidApogee;
 		boolean PrevVisible = false;
 
-		
 		ReferenceOrbit = satellite.EpochMeanAnomaly / (Math.PI * 2) + satellite.EpochOrbitNum;
 
 		PrevDay = -10000;
@@ -105,8 +125,8 @@ public class Ephemeris {
 		satellite.BeaconFreq *= 1E6; /* Convert to Hz */
 
 		DidApogee = false;
-
-		for (CurrentTime = StartTime; CurrentTime <= EndTime; CurrentTime += StepTime) {
+		
+		if (StepTime != 0.0) for (CurrentTime = StartTime; CurrentTime <= EndTime; CurrentTime += StepTime) {
 
 			Frame frame = new Frame(satellite.NumModes);
 			frame.currentTime = CurrentTime;
@@ -135,13 +155,13 @@ public class Ephemeris {
 			// double SatVX, SatVY, SatVZ; /* Kilometers/second */
 
 			double SemiMajorAxis = 331.25 * Math.exp(2 * Math.log(Constants.MinutesPerDay / CurrentMotion) / 3);
-			satellite.calcPosVel(SemiMajorAxis, CurrentTime, TrueAnomaly); // ,&SatX,&SatY,&SatZ,&Radius,
-																				// &SatVX,&SatVY,&SatVZ
-			site.calcPosVel(sun, CurrentTime, SiteMatrix); // &SiteX,&SiteY,&SiteZ,&SiteVX,&SiteVY,
+			satellite.calcPosVel(SemiMajorAxis, CurrentTime, TrueAnomaly); 
+			
+			site.calcPosVel(sun, CurrentTime, SiteMatrix);
 
-			bearing.calc(satellite, site, SiteMatrix); // &Elevation,&Azimuth
+			bearing.calc(satellite, site, SiteMatrix);
 
-			if (bearing.elevation >= site.SiteMinElev && CurrentTime >= StartTime) {
+			if (bearing.elevation >= SiteMinElev && CurrentTime >= StartTime) {
 
 				Day = (long) (CurrentTime + Constants.HalfSecond);
 				if (((double) Day) > CurrentTime + Constants.HalfSecond)
@@ -151,7 +171,7 @@ public class Ephemeris {
 					N3mo.outPrintStream.println(); /* Dipped out of sight; print blank */
 				}
 				if (OrbitNum != PrevOrbitNum || Day != PrevDay) {
-					printHeader(Day,OrbitNum,site.Flip,satellite.MaxPhase);
+					printHeader(Day,OrbitNum,Flip,satellite.MaxPhase);
 				}
 				PrevOrbitNum = OrbitNum;
 				PrevDay = Day;
@@ -169,7 +189,7 @@ public class Ephemeris {
 				bearing.elevation = Math.PI - bearing.elevation;
 				frame.azimuthFlip = bearing.azimuth * Constants.DegreesPerRadian;
 				frame.elevationFlip = bearing.elevation * Constants.DegreesPerRadian; 
-				if (site.Flip) {
+				if (Flip) {
 					N3mo.outPrintStream.print("  " + Math.round(frame.azimuthFlip) + "  " + Math.round(frame.elevationFlip));
 				}
 
@@ -203,7 +223,7 @@ public class Ephemeris {
 					N3mo.outPrintStream.print("    Apogee");
 				}
 				frame.eclipsed = sun.Eclipsed(satellite, CurrentTime);
-				if (site.PrintEclipses && frame.eclipsed) {
+				if (PrintEclipses && frame.eclipsed) {
 					N3mo.outPrintStream.print("  Eclipse");
 				}
 				N3mo.outPrintStream.println();
@@ -234,6 +254,7 @@ public class Ephemeris {
 
 		//Object to JSON in String
 		//String jsonInString = mapper.writeValueAsString(frames);
+		return true;
 	}
 
 	private void printHeader(long Day,long OrbitNum,boolean flip,double maxPhase) {
@@ -250,6 +271,7 @@ public class Ephemeris {
 		N3mo.outPrintStream.print("Doppler Range Height  Lat  Long  Phase(" + maxPhase + ")");
 		N3mo.outPrintStream.println();
 	}
+	
 	// SSP: Point where a straight line drawn from a satellite to the center of the Earth intersects the Earth's surface.
 	static double[] GetSubSatPoint(Sun solarKeps, Satellite sat, double Time) {
 		double r;
@@ -273,4 +295,77 @@ public class Ephemeris {
 			retval[2] = r - Constants.EarthRadius;
 		return retval;
 	}
+	
+	public double getStartTime() {
+		return StartTime;
+	}
+
+	public void setStartTime(double startTime) {
+		StartTime = startTime;
+	}
+
+	public double getEndTime() {
+		return EndTime;
+	}
+
+	public void setEndTime(double endTime) {
+		EndTime = endTime;
+	}
+
+	public double getStepTime() {
+		return StepTime;
+	}
+
+	public void setStepTime(double stepTime) {
+		StepTime = stepTime;
+	}
+
+	public Site getSite() {
+		return site;
+	}
+
+	public void setSite(Site site) {
+		this.site = site;
+		// TODO: remove next three lines, store them directly in this class
+		this.SiteMinElev = site.getSiteMinElev();
+		this.Flip = site.isFlip();
+		this.PrintEclipses = site.isPrintEclipses();	
+	}
+
+	public Satellite getSatellite() {
+		return satellite;
+	}
+
+	public void setSatellite(Satellite satellite) {
+		this.satellite = satellite;
+	}
+
+	public double getSiteMinElev() {
+		return SiteMinElev;
+	}
+
+	public void setSiteMinElev(double siteMinElev) {
+		SiteMinElev = siteMinElev;
+	}
+
+	public boolean isPrintEclipses() {
+		return PrintEclipses;
+	}
+
+	public void setPrintEclipses(boolean printEclipses) {
+		PrintEclipses = printEclipses;
+	}
+
+	public boolean isFlip() {
+		return Flip;
+	}
+
+	public void setFlip(boolean flip) {
+		Flip = flip;
+	}
+
+	public List<Frame> getFrames() {
+		return frames;
+	}
+
 }
