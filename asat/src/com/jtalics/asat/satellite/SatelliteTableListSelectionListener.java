@@ -5,10 +5,8 @@ import java.util.List;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
-import com.jtalics.asat.Asat;
 import com.jtalics.asat.AsatEvent;
 import com.jtalics.asat.AsatEventListener;
-import com.jtalics.asat.ephemeris.EphemerisDialog;
 import com.jtalics.n3mo.Satellite;
 
 public final class SatelliteTableListSelectionListener implements ListSelectionListener {
@@ -20,8 +18,13 @@ public final class SatelliteTableListSelectionListener implements ListSelectionL
 		this.satellites = satellites;
 	}
 
+	@Override
 	public void valueChanged(ListSelectionEvent ev) {
-
-    	AsatEventListener.fireEvent(new AsatEvent(satellites,AsatEvent.SATELLITE_SELECTED,satellites.get((ev.getFirstIndex()))));
+		if (ev.getValueIsAdjusting()) {
+			return;
+		}
+		// TODO: what if UNselected?
+		AsatEventListener.fireEvent(
+				new AsatEvent(satellites, AsatEvent.SATELLITE_SELECTED, satellites.get((ev.getFirstIndex()))));
 	}
 }

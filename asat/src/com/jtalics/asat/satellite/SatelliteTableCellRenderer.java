@@ -8,9 +8,9 @@ import javax.swing.table.TableCellRenderer;
 
 public final class SatelliteTableCellRenderer implements TableCellRenderer {
 	@Override
-	public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
-			boolean hasFocus, int row, int col) {
-		switch(col) {
+	public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
+			int row, int col) {
+		switch (col) {
 		case 0:
 			return new JLabel("Name");
 		case 1:

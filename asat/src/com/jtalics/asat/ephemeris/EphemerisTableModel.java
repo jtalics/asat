@@ -2,13 +2,11 @@ package com.jtalics.asat.ephemeris;
 
 import javax.swing.table.AbstractTableModel;
 
-import com.jtalics.asat.Asat;
+import com.jtalics.n3mo.Constants;
 import com.jtalics.n3mo.Ephemeris;
-import com.jtalics.n3mo.Satellite;
 
 public class EphemerisTableModel extends AbstractTableModel {
 
-	
 	private Ephemeris ephemeris;
 
 	public EphemerisTableModel(Ephemeris ephemeris) {
@@ -22,35 +20,41 @@ public class EphemerisTableModel extends AbstractTableModel {
 
 	@Override
 	public int getColumnCount() {
-		return 3;
+		return 12;
 	}
-//U.T.C.   Az  El   Az'  El' Doppler Range Height  Lat  Long  Phase(256.0)
+
+	// U.T.C. Az El Az' El' Doppler Range Height Lat Long Phase(256.0)
 	@Override
 	public Object getValueAt(int rowIndex, int columnIndex) {
 		Ephemeris.Frame frame = getFrameAt(rowIndex);
-		switch(columnIndex) {
+		switch (columnIndex) {
 		case 0:
-			return frame.currentTime;
+			return Constants.printTime(frame.currentTime);
 		case 1:
-			return frame.azimuth;
+			return Math.round(frame.azimuth);
 		case 2:
-			return frame.elevation;
+			return Math.round(frame.elevation);
 		case 3:
-			return frame.azimuthFlip;
+			return Math.round(frame.azimuthFlip);
 		case 4:
-			return frame.elevationFlip;
+			return Math.round(frame.elevationFlip);
 		case 5:
-			return frame.doppler;
+			return Math.round(frame.doppler);
 		case 6:
-			return frame.range;
+			return Math.round(frame.range);
 		case 7:
-			return frame.height;
+			return Math.round(frame.height);
 		case 8:
-			return frame.lat;
+			return Math.round(frame.lat);
 		case 9:
-			return frame.lon;
+			return Math.round(frame.lon);
 		case 10:
-			return frame.phase;
+			return Math.round(frame.phase);
+		case 11:
+			if (frame.eclipsed)
+				return "yes";
+			else
+				return "";
 		default:
 			throw new RuntimeException();
 		}

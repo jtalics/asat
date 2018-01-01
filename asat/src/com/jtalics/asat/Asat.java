@@ -13,15 +13,15 @@ import com.jtalics.n3mo.Satellite;
 import com.jtalics.n3mo.Site;
 
 public class Asat {
-	
-	public static Logger logger =Logger.getLogger("ASAT");
+
+	public static Logger logger = Logger.getLogger("ASAT");
 	public JFrame frame;
 	public MainPanel mainPanel;
 
 	public Asat() {
-		mainPanel=new MainPanel(this);
+		mainPanel = new MainPanel(this);
 	}
-	
+
 	private void createAndShowGUI(Asat asat) {
 		JFrame frame = new JFrame("ASAT v2018.00.00");
 		asat.frame = frame;
@@ -38,10 +38,11 @@ public class Asat {
 
 	public static void main(String[] args) throws IOException {
 		Asat asat = new Asat();
-		asat.logger.setLevel(Level.INFO);
+		Asat.logger.setLevel(Level.INFO);
 		// Schedule a job for the event-dispatching thread:
 		// creating and showing this application's GUI.
 		javax.swing.SwingUtilities.invokeLater(new Runnable() {
+			@Override
 			public void run() {
 				asat.createAndShowGUI(asat);
 			}

@@ -13,22 +13,22 @@ import com.jtalics.n3mo.Satellite;
 import com.jtalics.n3mo.Site;
 
 public class EphemerisDialog extends JDialog {
-	
+
 	private final Asat app;
 	private final Satellite satellite;
 	private final Site site;
-	
+
 	public EphemerisDialog(Asat app, Site site, Satellite sat) {
 		this.app = app;
 		this.site = site;
 		this.satellite = sat;
 		setModal(false);
 		add(getTopPanel());
-		setTitle(sat.SatName);
+		setTitle(sat.satName);
 		pack();
 		setVisible(true);
 	}
-	
+
 	private JPanel getTopPanel() {
 		setLayout(new BorderLayout());
 		JPanel topPanel = new JPanel();
@@ -45,7 +45,7 @@ public class EphemerisDialog extends JDialog {
 			public void actionPerformed(ActionEvent e) {
 				app.calcEphemeris(site, satellite);
 			}
-			
+
 		});
 		return button;
 	}

@@ -30,26 +30,28 @@ public class EphemerisPanel extends JPanel implements AsatEventListener {
 		ephemerisTableModel = new EphemerisTableModel(ephemeris);
 		ephemerisTable.setModel(ephemerisTableModel);
 		AsatEventListener.addListener(this);
-		add(new TimeStepPanel(ephemeris),BorderLayout.SOUTH);
+		add(new TimeStepPanel(ephemeris), BorderLayout.SOUTH);
 	}
 
 	@Override
 	public void eventOccurred(AsatEvent ev) {
-		
-		switch(ev.id) {
+
+		switch (ev.id) {
 		case AsatEvent.SITE_SELECTED:
-			ephemeris.setSite((Site)ev.arg);
-			if (ephemeris.calc()) ephemerisTableModel.fireTableDataChanged();		
+			ephemeris.setSite((Site) ev.arg);
+			if (ephemeris.calc())
+				ephemerisTableModel.fireTableDataChanged();
 			break;
 		case AsatEvent.SATELLITE_SELECTED:
-			ephemeris.setSatellite((Satellite)ev.arg);
-			if (ephemeris.calc()) ephemerisTableModel.fireTableDataChanged();		
+			ephemeris.setSatellite((Satellite) ev.arg);
+			if (ephemeris.calc())
+				ephemerisTableModel.fireTableDataChanged();
 			break;
 		case AsatEvent.EPHEMERIS_FRAME_SELECTED:
 			ephemeris.calc();
-			ephemerisTableModel.fireTableDataChanged();		
+			ephemerisTableModel.fireTableDataChanged();
 			break;
 		}
-		
+
 	}
 }

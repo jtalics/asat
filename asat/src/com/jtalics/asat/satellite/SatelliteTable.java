@@ -3,8 +3,8 @@ package com.jtalics.asat.satellite;
 import java.util.List;
 
 import javax.swing.JTable;
+import javax.swing.ListSelectionModel;
 
-import com.jtalics.asat.Asat;
 import com.jtalics.n3mo.Satellite;
 
 public class SatelliteTable extends JTable {
@@ -13,5 +13,6 @@ public class SatelliteTable extends JTable {
 
 	public SatelliteTable(List<Satellite> satellites) {
 		this.satellites = satellites;
+		setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 	}
 }
