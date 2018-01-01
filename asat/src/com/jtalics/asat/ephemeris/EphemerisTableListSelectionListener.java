@@ -1,5 +1,6 @@
 package com.jtalics.asat.ephemeris;
 
+import javax.swing.DefaultListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
@@ -21,7 +22,11 @@ public class EphemerisTableListSelectionListener implements ListSelectionListene
 		if (ev.getValueIsAdjusting()) {
 			return;
 		}
-
-		AsatEventListener.fireEvent(new AsatEvent(ephemeris, AsatEvent.EPHEMERIS_FRAME_SELECTED, null));
+		for (int row=ev.getFirstIndex(); row<=ev.getLastIndex(); row++) {
+			if (((DefaultListSelectionModel)ev.getSource()).isSelectedIndex(row)) {
+				AsatEventListener.fireEvent(
+						new AsatEvent(ephemeris, AsatEvent.EPHEMERIS_FRAME_SELECTED, ephemeris.frames.get((row))));
+				}			
+		}
 	}
 }

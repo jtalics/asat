@@ -48,8 +48,8 @@ public class EphemerisPanel extends JPanel implements AsatEventListener {
 				ephemerisTableModel.fireTableDataChanged();
 			break;
 		case AsatEvent.EPHEMERIS_FRAME_SELECTED:
-			ephemeris.calc();
-			ephemerisTableModel.fireTableDataChanged();
+			//ephemeris.calc();
+			//ephemerisTableModel.fireTableDataChanged();
 			break;
 		}
 

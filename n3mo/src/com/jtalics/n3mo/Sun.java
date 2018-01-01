@@ -1,6 +1,6 @@
 package com.jtalics.n3mo;
 
-// The sun is considered a satellite of the earth -- should we extend Satellite then?
+// The sun is considered a satellite of the earth -- TODO: should we extend Satellite then?
 class Sun {
 
 	/*
@@ -12,16 +12,17 @@ class Sun {
 	/* values for shadow geometry */
 	private final static double Epsilon = Constants.RadiansPerDegree / 3600; /* 1 arc second */
 
-	double SinPenumbra, CosPenumbra;
-	double SidDay, SidReference; /* Date and sidereal time */
+	private final double sinPenumbra, cosPenumbra;
+	final double siderealDay, siderealReference; /* Date and sidereal time */
 	/* Keplerian elements for the sun */
-	double SunEpochTime, SunInclination, SunRAAN, SunEccentricity, SunArgPerigee, SunMeanAnomaly, SunMeanMotion;
+	private double sunEpochTime, sunInclination, sunRAAN, sunEccentricity, sunArgPerigee, sunMeanAnomaly, sunMeanMotion;
 	private final static double SunSemiMajorAxis = 149598845.0; /* Kilometers */
 	private final static double SunRadius = 695000;
 	final static double SiderealSolar = 1.0027379093;
-	final static double SidRate = (Constants.PI2 * SiderealSolar / Constants.SecondsPerDay); /* radians/second */
+	final static double SiderealRate = (Constants.PI2 * SiderealSolar / Constants.SecondsPerDay); /* radians/second */
 
 	Sun(final double EpochDay) {
+
 		double T, T2, T3, Omega;
 		int n;
 		double SunTrueAnomaly, SunDistance;
@@ -30,53 +31,40 @@ class Sun {
 		T2 = T * T;
 		T3 = T2 * T;
 
-		SidDay = Math.floor(EpochDay);
+		siderealDay = Math.floor(EpochDay);
 
-		SidReference = (6.6460656 + 2400.051262 * T + 0.00002581 * T2) / 24;
-		SidReference -= Math.floor(SidReference);
+		double d = (6.6460656 + 2400.051262 * T + 0.00002581 * T2) / 24;
+		siderealReference = d - Math.floor(d);
 
 		/* Omega is used to correct for the nutation and the abberation */
 		Omega = (259.18 - 1934.142 * T) * Constants.RadiansPerDegree;
 		n = (int) (Omega / Constants.PI2); // JTAL
 		Omega -= n * Constants.PI2;
 
-		SunEpochTime = EpochDay;
-		SunRAAN = 0;
+		sunEpochTime = EpochDay;
+		sunRAAN = 0;
 
-		SunInclination = (23.452294 - 0.0130125 * T - 0.00000164 * T2 + 0.000000503 * T3 + 0.00256 * Math.cos(Omega))
+		sunInclination = (23.452294 - 0.0130125 * T - 0.00000164 * T2 + 0.000000503 * T3 + 0.00256 * Math.cos(Omega))
 				* Constants.RadiansPerDegree;
-		SunEccentricity = (0.01675104 - 0.00004180 * T - 0.000000126 * T2);
-		SunArgPerigee = (281.220833 + 1.719175 * T + 0.0004527 * T2 + 0.0000033 * T3) * Constants.RadiansPerDegree;
-		SunMeanAnomaly = (358.475845 + 35999.04975 * T - 0.00015 * T2 - 0.00000333333 * T3)
+		sunEccentricity = (0.01675104 - 0.00004180 * T - 0.000000126 * T2);
+		sunArgPerigee = (281.220833 + 1.719175 * T + 0.0004527 * T2 + 0.0000033 * T3) * Constants.RadiansPerDegree;
+		sunMeanAnomaly = (358.475845 + 35999.04975 * T - 0.00015 * T2 - 0.00000333333 * T3)
 				* Constants.RadiansPerDegree;
-		n = (int) (SunMeanAnomaly / Constants.PI2);
-		SunMeanAnomaly -= n * Constants.PI2;
+		n = (int) (sunMeanAnomaly / Constants.PI2);
+		sunMeanAnomaly -= n * Constants.PI2;
 
-		SunMeanMotion = 1 / (365.24219879 - 0.00000614 * T);
+		sunMeanMotion = 1 / (365.24219879 - 0.00000614 * T);
 
-		SunTrueAnomaly = Kepler(SunMeanAnomaly, SunEccentricity);
-		SunDistance = SunSemiMajorAxis * (1 - (SunEccentricity * SunEccentricity))
-				/ (1 + SunEccentricity * Math.cos(SunTrueAnomaly));
+		SunTrueAnomaly = Kepler(sunMeanAnomaly, sunEccentricity);
+		SunDistance = SunSemiMajorAxis * (1 - (sunEccentricity * sunEccentricity))
+				/ (1 + sunEccentricity * Math.cos(SunTrueAnomaly));
 
-		SinPenumbra = (SunRadius - Constants.EarthRadius) / SunDistance;
-		CosPenumbra = Math.sqrt(1 - (SinPenumbra * SinPenumbra));
+		sinPenumbra = (SunRadius - Constants.EarthRadius) / SunDistance;
+		cosPenumbra = Math.sqrt(1 - (sinPenumbra * sinPenumbra));
 	}
 
-	long calls = 0;
-
-	double radius;
-
-	private double X;
-
-	private double Y;
-
-	private double Z;
-
-	private double VX;
-
-	private double VY;
-
-	private double VZ;
+	private long calls = 0;
+	private double X, Y, Z, VX, VY, VZ, radius;
 
 	/* Solve Kepler's equation */
 	/* Inputs: */
@@ -100,7 +88,7 @@ class Sun {
 			E -= Error;
 			iters++;
 		} while (Math.abs(Error) >= Epsilon && iters < 1000);
-		if (iters >=1000) {
+		if (iters >= 1000) {
 			throw new RuntimeException("Sun.Kepler failed on iters");
 		}
 
@@ -117,45 +105,47 @@ class Sun {
 	}
 
 	boolean Eclipsed(Satellite sat, double CurrentTime) {
+
 		double MeanAnomaly, TrueAnomaly;
-		double CosTheta;
 
-		MeanAnomaly = SunMeanAnomaly + (CurrentTime - SunEpochTime) * SunMeanMotion * Constants.PI2;
-		TrueAnomaly = Kepler(MeanAnomaly, SunEccentricity);
+		MeanAnomaly = sunMeanAnomaly + (CurrentTime - sunEpochTime) * sunMeanMotion * Constants.PI2;
+		TrueAnomaly = Kepler(MeanAnomaly, sunEccentricity);
 
-		calcPosVel(SunSemiMajorAxis, 0.0, 0.0, CurrentTime, TrueAnomaly); // sun = {SunX,SunY,SunZ,SunRad,vx,vy,vz}
+		calcPosVel(SunSemiMajorAxis, 0.0, 0.0, CurrentTime, TrueAnomaly);
 
-		CosTheta = (X * sat.X + Y * sat.Y + Z * sat.Z) / (radius * sat.radius) * CosPenumbra
-				+ (sat.radius / Constants.EarthRadius) * SinPenumbra;
+		double CosTheta = (X * sat.X + Y * sat.Y + Z * sat.Z) / (radius * sat.radius) * cosPenumbra
+				+ (sat.radius / Constants.EarthRadius) * sinPenumbra;
 
-		if (CosTheta < 0)
+		if (CosTheta < 0) {
 			if (CosTheta < -Math.sqrt((sat.radius * sat.radius) - (Constants.EarthRadius * Constants.EarthRadius))
-					/ sat.radius * CosPenumbra + (sat.radius / Constants.EarthRadius) * SinPenumbra)
-
+					/ sat.radius * cosPenumbra + (sat.radius / Constants.EarthRadius) * sinPenumbra) {
 				return true;
+			}
+		}
 		return false;
 	}
-	
+
 	/*
 	 * Compute the satellite postion and velocity in the RA based coordinate system,
-	 * returns array: double[7] {X,Y,Z,Radius,VX,VY,VZ;}
 	 */
-	private void calcPosVel(double SemiMajorAxis, double RAANPrecession, double PerigeePrecession, double Time, double TrueAnomaly) {
+	private void calcPosVel(double SemiMajorAxis, double RAANPrecession, double PerigeePrecession, double Time,
+			double TrueAnomaly) {
 
 		double RAAN, ArgPerigee;
 		double Xw, Yw, VXw, VYw; /* In orbital plane */
 
-		radius = SemiMajorAxis * (1 - (SunEccentricity * SunEccentricity)) / (1 + SunEccentricity * Math.cos(TrueAnomaly));
+		radius = SemiMajorAxis * (1 - (sunEccentricity * sunEccentricity))
+				/ (1 + sunEccentricity * Math.cos(TrueAnomaly));
 		Xw = radius * Math.cos(TrueAnomaly);
 		Yw = radius * Math.sin(TrueAnomaly);
 
-		double Tmp = Math.sqrt(Constants.GM / (SemiMajorAxis * (1 - (SunEccentricity * SunEccentricity))));
+		double Tmp = Math.sqrt(Constants.GM / (SemiMajorAxis * (1 - (sunEccentricity * sunEccentricity))));
 
 		VXw = -Tmp * Math.sin(TrueAnomaly);
-		VYw = Tmp * (Math.cos(TrueAnomaly) + SunEccentricity);
+		VYw = Tmp * (Math.cos(TrueAnomaly) + sunEccentricity);
 
-		ArgPerigee = SunArgPerigee + (Time - SunEpochTime) * PerigeePrecession;
-		RAAN = SunRAAN - (Time - SunEpochTime) * RAANPrecession;
+		ArgPerigee = sunArgPerigee + (Time - sunEpochTime) * PerigeePrecession;
+		RAAN = sunRAAN - (Time - sunEpochTime) * RAANPrecession;
 
 		double CosArgPerigee, SinArgPerigee;
 		double CosRAAN, SinRAAN, CoSinclination, SinInclination;
@@ -163,8 +153,8 @@ class Sun {
 		SinRAAN = Math.sin(RAAN);
 		CosArgPerigee = Math.cos(ArgPerigee);
 		SinArgPerigee = Math.sin(ArgPerigee);
-		CoSinclination = Math.cos(SunInclination);
-		SinInclination = Math.sin(SunInclination);
+		CoSinclination = Math.cos(sunInclination);
+		SinInclination = Math.sin(sunInclination);
 
 		double Px, Qx, Py, Qy, Pz, Qz; /* Escobal transformation 31 */
 		Px = CosArgPerigee * CosRAAN - SinArgPerigee * SinRAAN * CoSinclination;

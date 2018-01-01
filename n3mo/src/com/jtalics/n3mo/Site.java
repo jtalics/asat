@@ -52,7 +52,7 @@ public class Site {
 		String minElevationDegrees = "\t\tMin Elevation (Degrees)";
 		if (line.endsWith(minElevationDegrees))
 			line = line.substring(0, line.length() - minElevationDegrees.length());
-		SiteAltitude = Double.parseDouble(line);
+		SiteMinElev = Double.parseDouble(line);
 		SiteMinElev *= Constants.RadiansPerDegree;
 
 		Flip = PrintEclipses = false;
@@ -66,7 +66,7 @@ public class Site {
 				System.err.println(name + " unknown option: '" + line + "'");
 		}
 	}
-	
+
 	/*
 	 * Compute the site position and velocity in the RA based coordinate system.
 	 * SiteMatrix is set to a matrix which is used by GetTopoCentric to convert
@@ -90,21 +90,23 @@ public class Site {
 		CosLat = Math.cos(Lat);
 		SinLat = Math.sin(Lat);
 
-		G1 = Constants.EarthRadius / (Math.sqrt(1 - (2 * Constants.EarthFlat - (Constants.EarthFlat * Constants.EarthFlat)) * (SinLat * SinLat)));
+		G1 = Constants.EarthRadius / (Math
+				.sqrt(1 - (2 * Constants.EarthFlat - (Constants.EarthFlat * Constants.EarthFlat)) * (SinLat * SinLat)));
 		G2 = G1 * ((1 - Constants.EarthFlat) * (1 - Constants.EarthFlat));
 		G1 += SiteAltitude;
 		G2 += SiteAltitude;
 		// }
 
-		SiteRA = Constants.PI2 * ((CurrentTime - solarKeps.SidDay) * Sun.SiderealSolar + solarKeps.SidReference) - SiteLong;
+		SiteRA = Constants.PI2
+				* ((CurrentTime - solarKeps.siderealDay) * Sun.SiderealSolar + solarKeps.siderealReference) - SiteLong;
 		CosRA = Math.cos(SiteRA);
 		SinRA = Math.sin(SiteRA);
 
 		X = G1 * CosLat * CosRA;
 		Y = G1 * CosLat * SinRA;
 		Z = G2 * SinLat;
-		VX = -Sun.SidRate * Y; // TODO double check, orig could be bad
-		VY = Sun.SidRate * X;
+		VX = -Sun.SiderealRate * Y; // TODO double check, orig could be bad x,y swapped accidentally?
+		VY = Sun.SiderealRate * X;
 
 		SiteMatrix[0][0] = SinLat * CosRA;
 		SiteMatrix[0][1] = SinLat * SinRA;
@@ -117,11 +119,11 @@ public class Site {
 		SiteMatrix[2][2] = SinLat;
 	}
 
-	//TODO: move these Ephemeris
+	// TODO: move these Ephemeris
 	private boolean Flip;
 	private double SiteMinElev;
 	private boolean PrintEclipses;
-	
+
 	public boolean isFlip() {
 		return Flip;
 	}

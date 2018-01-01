@@ -19,7 +19,7 @@ public class N3mo {
 
 		System.out.println(Constants.VersionStr);
 
-		Satellite satellite = new Satellite(new File("kepler.dat"));
+		Satellite satellite = new Satellite(new File("kepler.dat"), "k");
 		Site site = new Site();
 		Ephemeris ephemeris = new Ephemeris(site, satellite);
 
@@ -27,18 +27,18 @@ public class N3mo {
 			FileName = System.console().readLine("Output file (RETURN for TTY): ");
 		}
 		if (FileName == null || FileName.length() > 0) {
-			File file = new File(FileName, satellite.SatName + ".eph");
+			File file = new File(FileName, satellite.satName + ".eph");
 			outPrintStream = new PrintStream(file);
 		}
-		
-		outPrintStream.println(satellite.SatName + " Element Set " + satellite.ElementSet);
+
+		outPrintStream.println(satellite.satName + " Element Set " + satellite.elementSet);
 
 		outPrintStream.println(site.SiteName);
 
-		outPrintStream.println("Doppler calculated for freq = " + satellite.BeaconFreq);
+		outPrintStream.println("Doppler calculated for freq = " + satellite.beaconFreq);
 
 		ephemeris.calc();
-		
+
 		outPrintStream.close();
 	}
 
