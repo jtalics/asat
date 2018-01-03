@@ -11,17 +11,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class Ephemeris {
 
-	public double startTime, endTime, stepTime; /* In Days, 1 = New Year of reference year */
-	public Site site;
-	public Satellite satellite;
-
+	public double startTime, endTime, stepTime; /* Units of days since 1900, e.g. 1.5 = noon on 1-2-1900 */
 	public double siteMinElev; // ignore satellites below this angular elevation in the sky, 0.0 = horizon
 	public boolean printEclipses; // is satellite eclipsing sun?
 	public boolean flip; // print flipped angles for special hardware
 
-	public class Frame { // like one frame in a movie
+	public static class Frame { // like one frame in a movie
 
-		Frame(int numModes) {
+		public Frame() {
+			// JSON only
+		}
+		
+		public Frame(int numModes) {
 			modes = new String[numModes];
 		}
 
@@ -43,24 +44,25 @@ public class Ephemeris {
 
 	public List<Frame> frames = new ArrayList<>();
 
+	public Site site;
+	public Satellite satellite;
+
+	private final static String JSON_FILE_NAME = "ephemeris.json";
+	
+	public Ephemeris() {
+		// use for JSON
+	}
+	
 	// READ FROM CONSOLE
 	Ephemeris(Site site, Satellite satellite) {
 		this.site = site;
 		this.satellite = satellite;
+/*
 		// TODO: remove next three lines, store them directly in this class
 		this.siteMinElev = site.getSiteMinElev();
 		this.flip = site.isFlip();
 		this.printEclipses = site.isPrintEclipses();
-
-		GetSimulationParams();
-	}
-
-	// BACKING OBJECT FOR ASAT
-	public Ephemeris() {
-		// TODO: remove next three lines, store them directly in this class
-		this.siteMinElev = 10.0; // heavens-above.com default
-		this.flip = true;
-		this.printEclipses = true;
+*/
 		GetSimulationParams();
 	}
 
@@ -76,9 +78,9 @@ public class Ephemeris {
 		String s[] = line.split(" ");
 		Month = Integer.parseInt(s[0]);
 		Day = Integer.parseInt(s[1]);
-		Year = Integer.parseInt(s[2]);
+		Year = Integer.parseInt(s[2]); 
 
-		startTime = Constants.getDayNum(Year, Month, Day);
+		startTime = Constants.getDayCountSince1900(Year, Month, Day);
 		line = "0";
 		if (!N3mo.NOCONSOLE) {
 			line = System.console().readLine("Starting Hour (UTC) :");
@@ -99,7 +101,7 @@ public class Ephemeris {
 	}
 
 	public boolean calc() {
-
+		frames.clear();
 		if (satellite == null || site == null) {
 			return false;
 		}
@@ -115,7 +117,7 @@ public class Ephemeris {
 		double MeanAnomaly, TrueAnomaly;
 		final double SiteMatrix[][] = new double[3][3];
 		long OrbitNum, PrevOrbitNum;
-		long Day, PrevDay;
+		int Day, PrevDay;
 		double Doppler;
 		int Phase;
 		boolean DidApogee;
@@ -127,8 +129,6 @@ public class Ephemeris {
 		PrevOrbitNum = -10000;
 
 		DidApogee = false;
-		frames.clear();
-System.out.println("CALC EPH AT MIN ELEV = " + siteMinElev);
 		if (stepTime != 0.0)
 			for (CurrentTime = startTime; CurrentTime <= endTime; CurrentTime += stepTime) {
 
@@ -165,7 +165,7 @@ System.out.println("CALC EPH AT MIN ELEV = " + siteMinElev);
 
 				if (bearing.elevation >= siteMinElev && CurrentTime >= startTime) {
 
-					Day = (long) (CurrentTime + Constants.HalfSecond);
+					Day = (int) (CurrentTime + Constants.HalfSecond);
 					if (((double) Day) > CurrentTime + Constants.HalfSecond)
 						Day -= 1; /* Correct for truncation of negative values */
 
@@ -243,7 +243,7 @@ System.out.println("CALC EPH AT MIN ELEV = " + siteMinElev);
 
 		// Object to JSON in file
 		try {
-			mapper.writeValue(new File("frames.json"), this);
+			mapper.writeValue(new File(JSON_FILE_NAME), this);
 		} catch (JsonGenerationException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -260,11 +260,11 @@ System.out.println("CALC EPH AT MIN ELEV = " + siteMinElev);
 		return true;
 	}
 
-	private void printHeader(long Day, long OrbitNum, boolean flip, double maxPhase) {
+	private void printHeader(int Day, long OrbitNum, boolean flip, double maxPhase) {
 		/* Print Header */
 		N3mo.outPrintStream.print(Constants.DayNames[(int) (Day % 7)]);
 		N3mo.outPrintStream.print(" ");
-		long[] date = Constants.getDate(Day);
+		int[] date = Constants.getDate(Day);
 		N3mo.outPrintStream.print(date[2] + " " + date[1] + " " + date[0]);
 		N3mo.outPrintStream.println("  ----Orbit # " + OrbitNum + "-----");
 		N3mo.outPrintStream.print(" U.T.C.   Az  El  ");
@@ -276,7 +276,8 @@ System.out.println("CALC EPH AT MIN ELEV = " + siteMinElev);
 	}
 
 	// SSP: Lat,lon where a straight line drawn from a satellite to the center of
-	// the Earth intersects the Earth's surface.
+	// the Earth intersects the Earth's surface.  It is the place on earth where
+	// the satellite is at zenith.  Good for generating world ground trace maps.
 	static double[] GetSubSatPoint(Sun solarKeps, Satellite sat, double Time) {
 		double r;
 		long i;
@@ -331,10 +332,12 @@ System.out.println("CALC EPH AT MIN ELEV = " + siteMinElev);
 
 	public void setSite(Site site) {
 		this.site = site;
+/*
 		// TODO: remove next three lines, store them directly in this class
 		this.siteMinElev = site.getSiteMinElev();
 		this.flip = site.isFlip();
 		this.printEclipses = site.isPrintEclipses();
+*/
 	}
 
 	public Satellite getSatellite() {
@@ -371,5 +374,30 @@ System.out.println("CALC EPH AT MIN ELEV = " + siteMinElev);
 
 	public List<Frame> getFrames() {
 		return frames;
+	}
+
+	public static Ephemeris getInstance() {
+		
+		Ephemeris ephemeris = null;
+		ObjectMapper mapper = new ObjectMapper();
+
+		// Object to JSON in file
+		try {
+			ephemeris = mapper.readValue(new File(JSON_FILE_NAME), Ephemeris.class);
+		} catch (JsonGenerationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (JsonMappingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		if (ephemeris == null) {
+			ephemeris = new Ephemeris(null,null);
+		}
+		return ephemeris;
 	}
 }

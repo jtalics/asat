@@ -29,13 +29,13 @@ public class SiteTableModel extends AbstractTableModel {
 		Site site = getSiteAt(rowIndex);
 		switch (columnIndex) {
 		case 0:
-			return site.SiteName;
+			return site.siteName;
 		case 1:
-			return site.SiteLat;
+			return site.siteLat;
 		case 2:
-			return site.SiteLong;
+			return site.siteLong;
 		case 3:
-			return site.SiteAltitude;
+			return site.siteAltitude;
 		default:
 			throw new RuntimeException();
 		}

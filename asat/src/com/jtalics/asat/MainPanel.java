@@ -33,7 +33,7 @@ public class MainPanel extends JPanel {
 		splitPane.setLeftComponent(sitePanel);
 		SatellitePanel satellitePanel = getSatellitePanel();
 		splitPane.setRightComponent(satellitePanel);
-		add(new StatusPanel(asat), BorderLayout.SOUTH);
+		add(new StatusPanel(asat), BorderLayout.SOUTH);	
 	};
 
 	private EphemerisPanel getEphemerisPanel() {

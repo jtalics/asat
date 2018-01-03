@@ -5,16 +5,15 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 
-public class Site {
-	/* Site Parameters */
-	public String SiteName;
-	public double SiteLat, SiteLong, SiteAltitude;
+import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-	double X;
-	double Y;
-	double Z;
-	double VX;
-	double VY;
+public class Site {
+
+	public String siteName;
+	public double siteLat, siteLong, siteAltitude;
+	double X, Y, Z, VX, VY;
 
 	public Site() throws IOException {
 
@@ -26,28 +25,28 @@ public class Site {
 		}
 		List<String> lines = Constants.getLines(new File(name));
 		Iterator<String> iter = lines.iterator();
-		SiteName = iter.next();
+		siteName = iter.next();
 		line = iter.next();
 		String latitude = "\t\tLatitude";
 		if (line.endsWith(latitude))
 			line = line.substring(0, line.length() - latitude.length());
-		SiteLat = Double.parseDouble(line);
-		SiteLat *= Constants.RadiansPerDegree;
+		siteLat = Double.parseDouble(line);
+		siteLat *= Constants.RadiansPerDegree;
 
 		line = iter.next();
 		String longitude = "\t\tLongitude";
 		if (line.endsWith(longitude))
 			line = line.substring(0, line.length() - longitude.length());
-		SiteLong = Double.parseDouble(line);
-		SiteLong *= Constants.RadiansPerDegree;
+		siteLong = Double.parseDouble(line);
+		siteLong *= Constants.RadiansPerDegree;
 
 		line = iter.next();
 		String heightMeters = "\t\tHeight (Meters)";
 		if (line.endsWith(heightMeters))
 			line = line.substring(0, line.length() - heightMeters.length());
-		SiteAltitude = Double.parseDouble(line);
-		SiteAltitude /= 1000; // meters to km
-
+		siteAltitude = Double.parseDouble(line);
+		siteAltitude /= 1000; // meters to km
+/*
 		line = iter.next();
 		String minElevationDegrees = "\t\tMin Elevation (Degrees)";
 		if (line.endsWith(minElevationDegrees))
@@ -65,6 +64,22 @@ public class Site {
 			} else
 				System.err.println(name + " unknown option: '" + line + "'");
 		}
+		ObjectMapper mapper = new ObjectMapper();
+
+		// Object to JSON in file
+		try {
+			mapper.writeValue(new File("site.json"), this);
+		} catch (JsonGenerationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (JsonMappingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		*/
 	}
 
 	/*
@@ -85,7 +100,7 @@ public class Site {
 		// if ((SiteLat != OldSiteLat) || (SiteElevation != OldSiteElevation)) {
 		// OldSiteLat = SiteLat;
 		// OldSiteElevation = SiteElevation;
-		Lat = Math.atan(1 / (1 - (Constants.EarthFlat * Constants.EarthFlat)) * Math.tan(SiteLat));
+		Lat = Math.atan(1 / (1 - (Constants.EarthFlat * Constants.EarthFlat)) * Math.tan(siteLat));
 
 		CosLat = Math.cos(Lat);
 		SinLat = Math.sin(Lat);
@@ -93,12 +108,12 @@ public class Site {
 		G1 = Constants.EarthRadius / (Math
 				.sqrt(1 - (2 * Constants.EarthFlat - (Constants.EarthFlat * Constants.EarthFlat)) * (SinLat * SinLat)));
 		G2 = G1 * ((1 - Constants.EarthFlat) * (1 - Constants.EarthFlat));
-		G1 += SiteAltitude;
-		G2 += SiteAltitude;
+		G1 += siteAltitude;
+		G2 += siteAltitude;
 		// }
 
 		SiteRA = Constants.PI2
-				* ((CurrentTime - solarKeps.siderealDay) * Sun.SiderealSolar + solarKeps.siderealReference) - SiteLong;
+				* ((CurrentTime - solarKeps.siderealDay) * Sun.SiderealSolar + solarKeps.siderealReference) - siteLong;
 		CosRA = Math.cos(SiteRA);
 		SinRA = Math.sin(SiteRA);
 
@@ -118,7 +133,7 @@ public class Site {
 		SiteMatrix[2][1] = SinRA * CosLat;
 		SiteMatrix[2][2] = SinLat;
 	}
-
+/*
 	// TODO: move these Ephemeris
 	private boolean Flip;
 	private double SiteMinElev;
@@ -135,4 +150,5 @@ public class Site {
 	public boolean isPrintEclipses() {
 		return PrintEclipses;
 	}
+*/
 }

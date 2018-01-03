@@ -33,7 +33,7 @@ public class N3mo {
 
 		outPrintStream.println(satellite.satName + " Element Set " + satellite.elementSet);
 
-		outPrintStream.println(site.SiteName);
+		outPrintStream.println(site.siteName);
 
 		outPrintStream.println("Doppler calculated for freq = " + satellite.beaconFreq);
 

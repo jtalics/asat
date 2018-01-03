@@ -18,7 +18,8 @@ class Bearing {
 	}
 
 	/*
-	 * Convert from geocentric RA based coordinates to topocentric (observer centered) coordinates
+	 * Convert from geocentric RA based coordinates to topocentric (observer
+	 * centered) coordinates
 	 */
 	private double[] GetTopocentric(double SatX, double SatY, double SatZ, double SiteX, double SiteY, double SiteZ,
 			double[][] SiteMatrix) {

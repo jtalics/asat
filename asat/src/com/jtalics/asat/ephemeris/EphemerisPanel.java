@@ -15,7 +15,7 @@ import com.jtalics.n3mo.Site;
 
 public class EphemerisPanel extends JPanel implements AsatEventListener {
 
-	public Ephemeris ephemeris = new Ephemeris();
+	public final Ephemeris ephemeris = Ephemeris.getInstance();
 	EphemerisTableModel ephemerisTableModel;
 
 	public EphemerisPanel() {
@@ -50,6 +50,10 @@ public class EphemerisPanel extends JPanel implements AsatEventListener {
 		case AsatEvent.EPHEMERIS_FRAME_SELECTED:
 			//ephemeris.calc();
 			//ephemerisTableModel.fireTableDataChanged();
+			break;
+		case AsatEvent.EPHEMERIS_SETTINGS_CHANGE:
+			if (ephemeris.calc())
+				ephemerisTableModel.fireTableDataChanged();
 			break;
 		}
 

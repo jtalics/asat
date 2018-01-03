@@ -14,53 +14,61 @@ import com.jtalics.n3mo.Ephemeris.Frame;
 public class Satellite {
 
 	public String satName; // ISS for example
-	// Keplerian Elements:
-	// https://marine.rutgers.edu/cool/education/class/paul/orbits.html
-	public final double epochTime; /* time of epoch */ // The first thing you need to define an orbit is the time at
-														// which the Keplerian Elements were defined. You need a
-														// snapshot of where and how fast the satellite was going.
-	public final double inclination; // This element tells you what the angle is between the equator and the orbit
-										// when looking from the center of the Earth. If the orbit went exactly around
-										// the equator from left to right, then the inclination would be 0. The
-										// inclination ranges from 0 to 180 degrees.
-	public final double epochRAAN; /* RAAN at epoch */ // This is probably one of the most difficult of the elements to
-														// describe. The ascending node is the place where the satellite
-														// crosses the equator while going from the Southern Hemisphere
-														// to the Northern Hemisphere. Now since the Earth rotates, you
-														// need to specify a fixed object in space. We use Aries (this
-														// is also the same location as the vernal equinox). The angle,
-														// from the center of the Earth, between Aries and the ascending
-														// node is called the right ascension of ascending node.
-	public final double eccentricity; // The eccentricity tells you how flat the orbit is. If the orbit is a perfect
-										// circle, then the eccentricity is 0. When the eccentricity is close to 1, then
-										// the orbit is very flat.
-	public final double epochArgPerigee; /* argument of perigee at epoch */ // Since an orbit usually has an elliptical
-																			// shape, the satellite will be closer to
-																			// the Earth at one point than at another.
-																			// The point where the satellite is the
-																			// closest to the Earth is called the
-																			// perigee. The point where the satellite is
-																			// the furthest from the Earth is called the
-																			// apogee. The argument of perigee is the
-																			// angle formed between the perigee and the
-																			// ascending node. If the perigee would
-																			// occur at the ascending node, the argument
-																			// of perigee would be 0.
-	public final double epochMeanMotion; /* Revolutions/day */ // The mean motion tells you how fast the satellite is
-																// going. According to Kepler's Law: v=(G*M)/r so as the
-																// satellite gets closer to the Earth, its velocity
-																// increases. If we know how fast the satellite is
-																// going, we also know the altitude of the satellite.
-	public final double epochMeanAnomaly; /* Mean Anomaly at epoch */ // The mean anomaly tells you where the satellite
-																		// is in its orbital path. The mean anomaly
-																		// ranges from 0 to 360 degrees. The mean
-																		// anomaly is referenced to the perigee. If the
-																		// satellite were at the perigee, the mean
-																		// anomaly would be 0.
+	// Keplerian Elements:  https://marine.rutgers.edu/cool/education/class/paul/orbits.html
+	// http://www.amsat.org/amsat-new/tools/keps_tutorial.php
+	// UPDATE KEPS BIWEEKLY for LEO, MONTHLY for HEO
+
+	// Time of epoch: The first thing you need to define an orbit is the time at
+	// which the Keplerian Elements were defined. You need a snapshot of where and
+	// how fast the satellite was going.
+	public double epochTime;  // In units of Days since 1/1/1900.  Noon on 1/2/1900 = 1.500
+	
+	// This element tells you what the angle is between the equator and the orbit
+	// when looking from the center of the Earth. If the orbit went exactly around
+	// the equator from left to right, then the inclination would be 0. The
+	// inclination ranges from 0 to 180 degrees.
+	public double inclination; 
+
+	// RAAN at epoch: This is probably one of the most difficult of the elements to
+	// describe. The ascending node is the place where the satellite
+	// crosses the equator while going from the Southern Hemisphere
+	// to the Northern Hemisphere. Now since the Earth rotates, you
+	// need to specify a fixed object in space. We use Aries (this
+	// is also the same location as the vernal equinox). The angle,
+	// from the center of the Earth, between Aries and the ascending
+	// node is called the right ascension of ascending node.
+	public double epochRAAN; 
+
+	// The eccentricity tells you how round the orbit is. If the orbit is a perfect
+	// circle, then the eccentricity is 0. When the eccentricity is close to 1, then
+	// the orbit is very flat.
+	public double eccentricity; 
+
+	// Argument of perigee at epoch: Since an orbit usually has an ellipticalshape,
+	// the satellite will be closer to the Earth at one point than at another. The
+	// point where the satellite is the closest to the Earth is called the perigee.
+	// The point where the satellite is the furthest from the Earth is called the
+	// apogee. The argument of perigee is the angle formed between the perigee and
+	// the ascending node. If the perigee would occur at the ascending node, the
+	// argument of perigee would be 0.
+	public double epochArgPerigee; 
+
+	// Revolutions/day. The mean motion tells you how fast the satellite is going.
+	// According to Kepler's Law: v=(G*M)/r so as the satellite gets closer to the
+	// Earth, its velocity increases. If we know how fast the satellite is going, we
+	// also know the altitude of the satellite.
+	public double epochMeanMotion; 
+
+	// Mean Anomaly at epoch. The mean anomaly tells you where the satellite is in
+	// its orbital path. The mean anomaly ranges from 0 to 360 degrees. The mean
+	// anomaly is referenced to the perigee. If the satellite were at the perigee,
+	// the mean anomaly would be 0.
+	public double epochMeanAnomaly; 
+
 	// Misc. data for the satellite:
-	public final long epochOrbitNum; /* Integer orbit # of epoch */
-	public final double orbitalDecay; /* Revolutions/day^2 */
-	public final int elementSet;
+	public long epochOrbitNum; /* Integer orbit # of epoch */
+	public double orbitalDecay; /* Revolutions/day^2 */
+	public int elementSet;
 	public double beaconFreq = 146.0; /* Mhz, used for doppler calc */
 	public double maxPhase = 256; /* Phase units in 1 orbit */
 	public double perigeePhase;
@@ -80,6 +88,10 @@ public class Satellite {
 	private double raanPrecession;
 	private double perigeePrecession;
 
+	public Satellite() {
+		// JSON
+	}
+	
 	/**
 	 * READS AMSAT FORMAT
 	 */
@@ -155,8 +167,12 @@ public class Satellite {
 		String s = line.substring(token.length() + 1);
 		double d = Double.parseDouble(s);
 		int EpochYear = (int) (d / 1000.0);
-		d -= EpochYear * 1000.0;
-		epochTime = d + Constants.getDayNum(EpochYear, 1, 0);
+		d -= EpochYear * 1000.0; // d now is days with decimal
+		// only last two digits of year is saved? 
+		if (EpochYear < 50) {EpochYear += 2000;}
+		else if (EpochYear < 100) {EpochYear += 1900;}
+
+		epochTime = d + Constants.getDayCountSince1900(EpochYear, 1 , 1);
 
 		line = iter.next();
 		token = "Element set:";
@@ -313,15 +329,45 @@ public class Satellite {
 		calcPrecession();
 	}
 
-	/*
-	 * DECODE 2-LINE ELSETS WITH THE FOLLOWING KEY: 1 AAAAAU 00 0 0 BBBBB.BBBBBBBB
-	 * .CCCCCCCC 00000-0 00000-0 0 DDDZ
-	 * 01234567890123456789012345678901234567890123456789012345678901234567890 2
-	 * AAAAA EEE.EEEE FFF.FFFF GGGGGGG HHH.HHHH III.IIII JJ.JJJJJJJJKKKKKZ // TODO:
-	 * nasa.c yields KKKKZZ not KKKKKZ KEY: A-CATALOGNUM B-EPOCHTIME C-DECAY
-	 * D-ELSETNUM E-INCLINATION F-RAAN G-ECCENTRICITY H-ARGPERIGEE I-MNANOM
-	 * J-MNMOTION K-ORBITNUM Z-CHECKSUM
-	 */
+
+/* Also see http://celestrak.com/NORAD/documentation/tle-fmt.asp
+ * and: www.amsat.org/amsat-new/tools/keps_detail.php
+ * and: https://spaceflight.nasa.gov/realdata/sightings/SSapplications/Post/JavaSSOP/SSOP_Help/tle_def.html
+ * From AMSAT:
+ * Keplerian Elements For the International Space Station
+* 6 May, 2004
+*
+* ISS
+* 1 25544U 98067A   04127.92349537  .00017095  00000-0  14786-3 0  7232
+* 2 25544  51.6276 176.0525 0011067 106.0444 249.6038 15.69246258311835
+*
+*	2-Line Element Definition (use key to decode)
+*
+*	1 AAAAAU YYLLLPPP  BBBBB.BBBBBBBB  .CCCCCCCC  DDDDD-D  EEEEE-E F GGGGZ
+*	2 AAAAA  HHH.HHHH III.IIII JJJJJJJ KKK.KKKK MMM.MMMM NN.NNNNNNNNRRRRRZ
+*
+*	Key
+*
+*	    [1] - Line #1 label
+*	    [2] - Line #2 label
+*	    [AAAAA] - Catalog Number assigned sequentially (5-digit integer from 1 to 99999)
+*	    [U] - Security Classification (U = Unclassified)
+*	    [YYLLLPPP] - International Designator (YY = 2-digit Launch Year; LLL = 3-digit Sequential Launch of the Year; PPP = up to 3 letter Sequential Piece ID for that launch)
+*	    [BBBBB.BBBBBBBB] - Epoch Time -- 2-digit year, followed by 3-digit sequential day of the year, followed by the time represented as the fractional portion of one day
+*	    [.CCCCCCCC] - ndot/2 Drag Parameter (rev/day2) -- one half the first time derivative of the mean motion. This drag term is used by the SGP orbit propagator.
+*	    [DDDDD-D] - n double dot/6 Drag Parameter (rev/day3) -- one sixth the second time derivative of the mean motion. The "-D" is the tens exponent (10-D). This drag term is used by the SGP orbit propagator.
+*	    [EEEEE-E] - Bstar Drag Parameter (1/Earth Radii) -- Pseudo Ballistic Coefficient. The "-E" is the tens exponent (10-E). This drag term is used by the SGP4 orbit propagator.
+*	    [F] - Ephemeris Type -- 1-digit integer (zero value uses SGP or SGP4 as provided in the Project Spacetrack report.
+*	    [GGGG] - Element Set Number assigned sequentially (up to a 4-digit integer from 1 to 9999). This number recycles back to "1" on the update following element set number "9999."
+*	    [HHH.HHHH] - Orbital Inclination (from 0 to 180 degrees).
+*	    [III.IIII] - Right Ascension of the Ascending Node (from 0 to 360 degrees).
+*	    [JJJJJJJ] - Orbital Eccentricity -- there is an implied leading decimal point (between 0.0 and 1.0).
+*	    [KKK.KKKK] - Argument of Perigee (from 0 to 360 degrees).
+*	    [MMM.MMMM] - Mean Anomaly (from 0 to 360 degrees).
+*	    [NN.NNNNNNNN] - Mean Motion (revolutions per day).
+*	    [RRRRR] - Revolution Number (up to a 5-digit integer from 1 to 99999). This number recycles following revolution nymber 99999.
+*	    [Z] - Check Sum (1-digit integer). Both lines have a check sum that is computed from the sum of all integer characters on that line plus a "1" for each negative (-) sign on that line. The check sum is the modulo-10 (or ones digit) of the sum of the digits and negative signs. 
+*/	
 	public Satellite(String line0, String line1, String line2) {
 		satName = line0;
 		if (line1.charAt(0) != '1' || line2.charAt(0) != '2')
@@ -330,8 +376,12 @@ public class Satellite {
 		Integer catalogNum = Integer.parseInt(line1.substring(2, 7).trim()); // A
 		double d = Double.parseDouble(line1.substring(18, 32).trim()); // B
 		int EpochYear = (int) (d / 1000.0);
-		d -= EpochYear * 1000.0;
-		epochTime = d + Constants.getDayNum(EpochYear, 1, 0);
+		d -= EpochYear * 1000.0; // d now is days with decimal
+		// only last two digits of year is saved? 
+		if (EpochYear < 50) {EpochYear += 2000;}
+		else if (EpochYear < 100) {EpochYear += 1900;}
+
+		epochTime = d + Constants.getDayCountSince1900(EpochYear, 1 , 1);
 
 		orbitalDecay = Double.parseDouble(line1.substring(33, 43).trim()); // C
 		elementSet = Integer.parseInt(line1.substring(65, 68).trim()); // D
@@ -366,10 +416,9 @@ public class Satellite {
 	}
 
 	/*
-	 * Compute the satellite postion and velocity in the RA based coordinate system,
+	 * Compute the satellite position and velocity in the RA based coordinate system,
 	 * returns array: double[7] {X,Y,Z,Radius,VX,VY,VZ;}
 	 */
-
 	void calcPosVel(double SemiMajorAxis, double Time, double TrueAnomaly) {
 
 		double RAAN, ArgPerigee;
