@@ -1,22 +1,33 @@
 package com.jtalics.asat.ephemeris;
 
+import java.awt.Component;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.Calendar;
 import java.util.Properties;
 
+import javax.swing.ImageIcon;
 import javax.swing.JFormattedTextField.AbstractFormatter;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JTextField;
 import javax.swing.JWindow;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 
 import org.jdatepicker.impl.JDatePanelImpl;
 import org.jdatepicker.impl.JDatePickerImpl;
@@ -45,37 +56,33 @@ public class TimeStepPanel extends JPanel {
 		this.ephemeris = ephemeris;
 		setLayout(new GridLayout(4, 4));
 		JLabel startTimeLabel = new JLabel("Start time (y:M:d:h:m:s):");
-		/*
-		startTimeLabel.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseClicked(MouseEvent ev) {
-				// https://sourceforge.net/projects/jdatepicker/
-				UtilDateModel model = new UtilDateModel();
-				Properties p = new Properties();
-				p.put("text.today", "Today");
-				p.put("text.month", "Month");
-				p.put("text.year", "Year");
-				model.setDate(2017, 10, 30); // Java month is zero-based
-				model.setSelected(true);
-				JDatePanelImpl datePanel = new JDatePanelImpl(model, p);
-				JDatePickerImpl datePicker = new JDatePickerImpl(datePanel, new DateLabelFormatter());
-
-				JWindow window = new JWindow();
-				int X = ev.getX();
-				int Y = ev.getY();
-				setLocation(getLocation().x + (ev.getX() - X), getLocation().y + (ev.getY() - Y));
-				window.getContentPane().add(datePicker);
-				window.pack();
-				window.setVisible(true);
-			}
-		});
-		*/
 		add(startTimeLabel);
 		String d = "";
 		if (ephemeris != null) {
 			double t = ephemeris.startTime;
 			d=Constants.makeStandardDateTimeFormattedString(Constants.getDateTime(t));
 		}
+		final JPopupMenu popup = buildPopupMenu();
+		MouseListener popupMouseListener = new MouseAdapter() {
+ 
+            @Override
+            public void mousePressed(MouseEvent e) {
+                showPopup(e);
+            }
+ 
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                showPopup(e);
+            }
+ 
+            private void showPopup(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    popup.show(e.getComponent(),
+                            e.getX(), e.getY());
+                }
+            }
+        };
+  
 		ActionListener actionListener = new ActionListener() {
 
 			@Override
@@ -86,6 +93,7 @@ public class TimeStepPanel extends JPanel {
 		};
 		startTextField.setText(d);
 		startTextField.addActionListener(actionListener);
+		startTextField.addMouseListener(popupMouseListener);
 		add(startTextField);
 
 		add(new JLabel("Duration (days):"));
@@ -164,8 +172,9 @@ public class TimeStepPanel extends JPanel {
 		// endTime and duration are linked
 		if (ev.getSource() == startTextField) {
 			// calculate endTime based on duration (as is done originally by N3EMO)
-			ephemeris.startTime = Constants.getDurationInDaysSinceEpoch1900(Constants.parseStandardDateTimeFormattedString(startTextField.getText()));
-			double duration = Double.parseDouble(durationTextField.getText());			
+			String text = startTextField.getText();
+			ephemeris.startTime = Constants.getDurationInDaysSinceEpoch1900(Constants.parseStandardDateTimeFormattedString(text));
+			double duration = Double.parseDouble(durationTextField.getText());
 			ephemeris.endTime = ephemeris.startTime + duration;
 			endTextField.setText(Constants.makeStandardDateTimeFormattedString(Constants.getDateTime(ephemeris.endTime)));
 		}
@@ -195,5 +204,38 @@ public class TimeStepPanel extends JPanel {
 				
 		AsatEventListener.fireEvent(new AsatEvent(this, AsatEvent.EPHEMERIS_SETTINGS_CHANGE, ephemeris));
 		return;
+	}
+	
+	private JPopupMenu buildPopupMenu() {
+
+        final JPopupMenu popup = new JPopupMenu();
+        // New project menu item
+        JMenuItem menuItem = new JMenuItem("Current time",
+                new ImageIcon("images/x.png"));
+        menuItem.setMnemonic(KeyEvent.VK_C);
+        menuItem.getAccessibleContext().setAccessibleDescription(
+                "Current Time");
+        menuItem.addActionListener(new ActionListener() {
+ 
+            public void actionPerformed(ActionEvent e) {
+            	Component invoker = popup.getInvoker();
+            	if (invoker == startTextField) {
+            		ZonedDateTime current = ZonedDateTime.now(ZoneOffset.UTC);
+            		int[] now = new int[7];
+            		now[0] = current.getYear();
+            		now[1] = current.getMonthValue();
+            		now[2] = current.getDayOfMonth();
+            		now[3] = current.getHour();
+            		now[4] = current.getMinute();
+            		now[5] = current.getSecond();
+            		now[6] = current.getNano();
+            		//ephemeris.startTime = Constants.getDurationInDaysSinceEpoch1900(now);
+            		startTextField.setText(Constants.makeStandardDateTimeFormattedString(now));
+            	}
+            	//JOptionPane.showMessageDialog(null, "Current time to: "+popup.getInvoker());
+            }
+        });
+        popup.add(menuItem);
+        return popup;
 	}
 }

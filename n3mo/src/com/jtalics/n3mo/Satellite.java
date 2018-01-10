@@ -165,14 +165,14 @@ public class Satellite {
 			throw new Exception();
 		}
 		String s = line.substring(token.length() + 1);
-		double d = Double.parseDouble(s);
-		int EpochYear = (int) (d / 1000.0);
-		d -= EpochYear * 1000.0; // d now is days with decimal
+		double d = Double.parseDouble(s); // d is not an actual number and may contain spaces (TODO)
+		int epochYear = (int) (d / 1000.0);
+		d -= epochYear * 1000.0; // d now is days with decimal
 		// only last two digits of year is saved? 
-		if (EpochYear < 50) {EpochYear += 2000;}
-		else if (EpochYear < 100) {EpochYear += 1900;}
+		if (epochYear < 57) {epochYear += 2000;} // Sputnik was in 1957
+		else if (epochYear < 100) {epochYear += 1900;}
 
-		epochTime = d + Constants.getDayCountSince1900(EpochYear, 1 , 1);
+		epochTime = d + Constants.getDayNumberSince1900(epochYear, 1 , 1);
 
 		line = iter.next();
 		token = "Element set:";
@@ -329,71 +329,82 @@ public class Satellite {
 		calcPrecession();
 	}
 
-
-/* Also see http://celestrak.com/NORAD/documentation/tle-fmt.asp
- * and: www.amsat.org/amsat-new/tools/keps_detail.php
- * and: https://spaceflight.nasa.gov/realdata/sightings/SSapplications/Post/JavaSSOP/SSOP_Help/tle_def.html
- * From AMSAT:
- * Keplerian Elements For the International Space Station
-* 6 May, 2004
-*
-* ISS
-* 1 25544U 98067A   04127.92349537  .00017095  00000-0  14786-3 0  7232
-* 2 25544  51.6276 176.0525 0011067 106.0444 249.6038 15.69246258311835
-*
-*	2-Line Element Definition (use key to decode)
-*
-*	1 AAAAAU YYLLLPPP  BBBBB.BBBBBBBB  .CCCCCCCC  DDDDD-D  EEEEE-E F GGGGZ
-*	2 AAAAA  HHH.HHHH III.IIII JJJJJJJ KKK.KKKK MMM.MMMM NN.NNNNNNNNRRRRRZ
-*
-*	Key
-*
-*	    [1] - Line #1 label
-*	    [2] - Line #2 label
-*	    [AAAAA] - Catalog Number assigned sequentially (5-digit integer from 1 to 99999)
-*	    [U] - Security Classification (U = Unclassified)
-*	    [YYLLLPPP] - International Designator (YY = 2-digit Launch Year; LLL = 3-digit Sequential Launch of the Year; PPP = up to 3 letter Sequential Piece ID for that launch)
-*	    [BBBBB.BBBBBBBB] - Epoch Time -- 2-digit year, followed by 3-digit sequential day of the year, followed by the time represented as the fractional portion of one day
-*	    [.CCCCCCCC] - ndot/2 Drag Parameter (rev/day2) -- one half the first time derivative of the mean motion. This drag term is used by the SGP orbit propagator.
-*	    [DDDDD-D] - n double dot/6 Drag Parameter (rev/day3) -- one sixth the second time derivative of the mean motion. The "-D" is the tens exponent (10-D). This drag term is used by the SGP orbit propagator.
-*	    [EEEEE-E] - Bstar Drag Parameter (1/Earth Radii) -- Pseudo Ballistic Coefficient. The "-E" is the tens exponent (10-E). This drag term is used by the SGP4 orbit propagator.
-*	    [F] - Ephemeris Type -- 1-digit integer (zero value uses SGP or SGP4 as provided in the Project Spacetrack report.
-*	    [GGGG] - Element Set Number assigned sequentially (up to a 4-digit integer from 1 to 9999). This number recycles back to "1" on the update following element set number "9999."
-*	    [HHH.HHHH] - Orbital Inclination (from 0 to 180 degrees).
-*	    [III.IIII] - Right Ascension of the Ascending Node (from 0 to 360 degrees).
-*	    [JJJJJJJ] - Orbital Eccentricity -- there is an implied leading decimal point (between 0.0 and 1.0).
-*	    [KKK.KKKK] - Argument of Perigee (from 0 to 360 degrees).
-*	    [MMM.MMMM] - Mean Anomaly (from 0 to 360 degrees).
-*	    [NN.NNNNNNNN] - Mean Motion (revolutions per day).
-*	    [RRRRR] - Revolution Number (up to a 5-digit integer from 1 to 99999). This number recycles following revolution nymber 99999.
-*	    [Z] - Check Sum (1-digit integer). Both lines have a check sum that is computed from the sum of all integer characters on that line plus a "1" for each negative (-) sign on that line. The check sum is the modulo-10 (or ones digit) of the sum of the digits and negative signs. 
-*/	
+	/* Also see http://celestrak.com/NORAD/documentation/tle-fmt.asp
+	 * and: www.amsat.org/amsat-new/tools/keps_detail.php
+	 * and: https://spaceflight.nasa.gov/realdata/sightings/SSapplications/Post/JavaSSOP/SSOP_Help/tle_def.html
+	 * From AMSAT:
+	 * Keplerian Elements For the International Space Station
+ 	 * 6 May, 2004 
+	 *
+	 * ISS
+	 * 1 25544U 98067A   04127.92349537  .00017095  00000-0  14786-3 0  7232
+	 * 2 25544  51.6276 176.0525 0011067 106.0444 249.6038 15.69246258311835
+	 *
+	 *	2-Line Element Definition (use key to decode)
+	 *
+	 *	1 07530U 74089B   17348.52292424 -.00000039  00000-0  34057-4 0  9992
+	 *	1 AAAAAU YYLLLPPP  BBBBB.BBBBBBBB  .CCCCCCCC  DDDDD-D  EEEEE-E F GGGGZ
+	 *   01234567890123456789012345678901234567890123456789012345678901234567890
+	 *	2 AAAAA  HHH.HHHH III.IIII JJJJJJJ KKK.KKKK MMM.MMMM NN.NNNNNNNNRRRRRZ
+	    
+  	 * AUTHORITATIVE: https://www.space-track.org/documentation#/tle
+	 *	Key - DIFFERET THAN NASABARE!
+	 *
+	 *	    [1] - Line #1 label
+	 *	    [2] - Line #2 label
+	 *	    [AAAAA] - Catalog Number assigned sequentially (5-digit integer from 1 to 99999)
+	 *	    [U] - Security Classification (U = Unclassified)
+	 *	    [YYLLLPPP] - International Designator (YY = 2-digit Launch Year; LLL = 3-digit Sequential Launch of the Year; PPP = up to 3 letter Sequential Piece ID for that launch)
+	 *	    [BBBBB.BBBBBBBB] - Epoch Time -- 2-digit year, followed by 3-digit sequential day of the year, followed by the time represented as the fractional portion of one day
+	 *	    [.CCCCCCCC] - ndot/2 Drag Parameter (rev/day2) -- one half the first time derivative of the mean motion. This drag term is used by the SGP orbit propagator.
+	 *	    [DDDDD-D] - n double dot/6 Drag Parameter (rev/day3) -- one sixth the second time derivative of the mean motion. The "-D" is the tens exponent (10-D). This drag term is used by the SGP orbit propagator.
+	 *	    [EEEEE-E] - Bstar Drag Parameter (1/Earth Radii) -- Pseudo Ballistic Coefficient. The "-E" is the tens exponent (10-E). This drag term is used by the SGP4 orbit propagator.
+	 *	    [F] - Ephemeris Type -- 1-digit integer (zero value uses SGP or SGP4 as provided in the Project Spacetrack report.
+	 *	    [GGGG] - Element Set Number assigned sequentially (up to a 4-digit integer from 1 to 9999). This number recycles back to "1" on the update following element set number "9999."
+	 *	    [HHH.HHHH] - Orbital Inclination (from 0 to 180 degrees).
+	 *	    [III.IIII] - Right Ascension of the Ascending Node (from 0 to 360 degrees).
+	 *	    [JJJJJJJ] - Orbital Eccentricity -- there is an implied leading decimal point (between 0.0 and 1.0).
+	 *	    [KKK.KKKK] - Argument of Perigee (from 0 to 360 degrees).
+	 *	    [MMM.MMMM] - Mean Anomaly (from 0 to 360 degrees).
+	 *	    [NN.NNNNNNNN] - Mean Motion (revolutions per day).
+	 *	    [RRRRR] - Revolution Number (up to a 5-digit integer from 1 to 99999). This number recycles following revolution nymber 99999.
+	 *	    [Z] - Check Sum (1-digit integer). Both lines have a check sum that is computed from the sum of all integer characters on that line plus a "1" for each negative (-) sign on that line. The check sum is the modulo-10 (or ones digit) of the sum of the digits and negative signs. 
+	 */	
 	public Satellite(String line0, String line1, String line2) {
 		satName = line0;
 		if (line1.charAt(0) != '1' || line2.charAt(0) != '2')
 			throw new IllegalArgumentException("Keps incorrectly formatted:\n" + line0 + "\n" + line1 + "\n" + line2);
 
-		Integer catalogNum = Integer.parseInt(line1.substring(2, 7).trim()); // A
-		double d = Double.parseDouble(line1.substring(18, 32).trim()); // B
+		String s = line1.substring(2, 7);
+		Integer catalogNum = Integer.parseInt(s.trim()); // A
+		s = line1.substring(18, 32);
+		double d = Double.parseDouble(s.trim()); // B - nasabare=(18,32)
 		int EpochYear = (int) (d / 1000.0);
 		d -= EpochYear * 1000.0; // d now is days with decimal
 		// only last two digits of year is saved? 
-		if (EpochYear < 50) {EpochYear += 2000;}
+		if (EpochYear < 57) {EpochYear += 2000;} // Sputnik was in 1957
 		else if (EpochYear < 100) {EpochYear += 1900;}
 
-		epochTime = d + Constants.getDayCountSince1900(EpochYear, 1 , 1);
-
-		orbitalDecay = Double.parseDouble(line1.substring(33, 43).trim()); // C
-		elementSet = Integer.parseInt(line1.substring(65, 68).trim()); // D
-
-		inclination = Double.parseDouble(line2.substring(8, 16).trim()) * Constants.RadiansPerDegree; // E
-		epochRAAN = Double.parseDouble(line2.substring(17, 25).trim()) * Constants.RadiansPerDegree; // F
-		eccentricity = Double.parseDouble("." + line2.substring(26, 33).trim()); // G - append a decimal point
-		epochArgPerigee = Double.parseDouble(line2.substring(34, 42).trim()) * Constants.RadiansPerDegree; // H
-		epochMeanAnomaly = Double.parseDouble(line2.substring(43, 51).trim()) * Constants.RadiansPerDegree; // I
-		epochMeanMotion = Double.parseDouble(line2.substring(52, 63).trim()); // J
-		epochOrbitNum = Integer.parseInt(line2.substring(63, 67).trim()); // K
-		printApogee = (eccentricity >= 0.3);
+		epochTime = d + Constants.getDayNumberSince1900(EpochYear, 1 , 0);
+		s = line1.substring(33, 43);
+		orbitalDecay = Double.parseDouble(s.trim()); // C nasabare=(33,43)
+		s = line1.substring(63, 68);
+		elementSet = Integer.parseInt(s.trim()); // G nasabare=(63,68)
+		s = line2.substring(8, 16);
+		inclination = Double.parseDouble(s.trim()) * Constants.RadiansPerDegree; // H nasabare=(8,16)
+		s = line2.substring(17, 25);
+		epochRAAN = Double.parseDouble(s.trim()) * Constants.RadiansPerDegree; // I nasabare=(17,25)
+		s = line2.substring(26, 33);
+		eccentricity = Double.parseDouble("." + s.trim()); // J - append a decimal point nasabare=(26,33)
+		s = line2.substring(34, 42);
+		epochArgPerigee = Double.parseDouble(s.trim()) * Constants.RadiansPerDegree; // K nasabare=(34,42)
+		s = line2.substring(43, 51);
+		epochMeanAnomaly = Double.parseDouble(s.trim()) * Constants.RadiansPerDegree; // M nasabare=(43,51)
+		s = line2.substring(52, 63);
+		epochMeanMotion = Double.parseDouble(s.trim()); // N nasabare=(52,63)
+		s = line2.substring(63, 68);
+		epochOrbitNum = Integer.parseInt(s.trim()); // R nasabare=(63,68)
+		printApogee = (eccentricity >= 0.3); // oval orbit - print out when at farthest distance
 		perigeePhase = 0;
 		maxPhase = 256; /* Default values */
 		numModes = 0;
@@ -416,8 +427,7 @@ public class Satellite {
 	}
 
 	/*
-	 * Compute the satellite position and velocity in the RA based coordinate system,
-	 * returns array: double[7] {X,Y,Z,Radius,VX,VY,VZ;}
+	 * Compute the satellite position and velocity in the right ascension (RA) based coordinate system,
 	 */
 	void calcPosVel(double SemiMajorAxis, double Time, double TrueAnomaly) {
 

@@ -2,6 +2,9 @@ package com.jtalics.n3mo;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,9 +15,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class Ephemeris {
 
 	public double startTime, endTime, stepTime; /* Units of days since 1900, e.g. 1.5 = noon on 1-2-1900 */
-	public double siteMinElev; // ignore satellites below this angular elevation in the sky, 0.0 = horizon
-	public boolean printEclipses; // is satellite eclipsing sun?
-	public boolean flip; // print flipped angles for special hardware
+	public double siteMinElev=0.0; // ignore satellites below this angular elevation in the sky, 0.0 = horizon
+	public boolean printEclipses=true; // is satellite eclipsing sun?
+	public boolean flip=true; // print flipped angles for special hardware
 
 	public static class Frame { // like one frame in a movie
 
@@ -69,8 +72,8 @@ public class Ephemeris {
 	void GetSimulationParams() {
 
 		int Month, Day, Year;
-		// String line = "11 30 2017"; // Nov 30 2017 is the official test date
-		String line = "1 1 2018"; // Nov 30 2017 is the official test date
+		//String line = "11 30 2017"; // Nov 30 2017 is the official test date
+		String line = "1 10 2018";
 		
 		if (!N3mo.NOCONSOLE) {
 			line = System.console().readLine("Start date (UTC) (Month Day Year) :");
@@ -80,7 +83,7 @@ public class Ephemeris {
 		Day = Integer.parseInt(s[1]);
 		Year = Integer.parseInt(s[2]); 
 
-		startTime = Constants.getDayCountSince1900(Year, Month, Day);
+		startTime = Constants.getDayNumberSince1900(Year, Month, Day);
 		line = "0";
 		if (!N3mo.NOCONSOLE) {
 			line = System.console().readLine("Starting Hour (UTC) :");
@@ -101,16 +104,19 @@ public class Ephemeris {
 	}
 
 	public boolean calc() {
+
 		frames.clear();
-		if (satellite == null || site == null) {
+		if (satellite == null || site == null || stepTime==0) {
 			return false;
 		}
+		System.out.println("SITE:"+site.siteName);
+		System.out.println("SATELLITE:"+satellite.satName);
 		Bearing bearing = new Bearing();
 		Range range = new Range();
 		Sun sun = new Sun((startTime + endTime) / 2);
 
 		double ReferenceOrbit; /* Floating point orbit # at epoch */
-		double CurrentTime/* , TmpTime, PrevTime */; /* In Days */
+		double currentTime; /* A real number in units of days */
 		double CurrentOrbit;
 		double AverageMotion, /* Corrected for drag */
 				CurrentMotion;
@@ -128,117 +134,115 @@ public class Ephemeris {
 		PrevDay = -10000;
 		PrevOrbitNum = -10000;
 
+		// Here is the main loop of the calculation
 		DidApogee = false;
-		if (stepTime != 0.0)
-			for (CurrentTime = startTime; CurrentTime <= endTime; CurrentTime += stepTime) {
+		for (currentTime = startTime; currentTime <= endTime; currentTime += stepTime) {
 
-				Frame frame = new Frame(satellite.numModes);
-				frame.currentTime = CurrentTime;
-				AverageMotion = satellite.epochMeanMotion
-						+ (CurrentTime - satellite.epochTime) * satellite.orbitalDecay / 2;
-				CurrentMotion = satellite.epochMeanMotion
-						+ (CurrentTime - satellite.epochTime) * satellite.orbitalDecay;
+			Frame frame = new Frame(satellite.numModes);
+			frame.currentTime = currentTime;
+			
+			AverageMotion = satellite.epochMeanMotion + (currentTime - satellite.epochTime) * satellite.orbitalDecay / 2;
+			CurrentMotion = satellite.epochMeanMotion + (currentTime - satellite.epochTime) * satellite.orbitalDecay;
 
-				CurrentOrbit = ReferenceOrbit + (CurrentTime - satellite.epochTime) * AverageMotion;
-				OrbitNum = (long) CurrentOrbit;
+			CurrentOrbit = ReferenceOrbit + (currentTime - satellite.epochTime) * AverageMotion;
+			OrbitNum = (long) CurrentOrbit;
 
-				MeanAnomaly = (CurrentOrbit - OrbitNum) * Constants.PI2;
+			MeanAnomaly = (CurrentOrbit - OrbitNum) * Constants.PI2;
 
-				if (MeanAnomaly < Math.PI) {
-					DidApogee = false;
-				}
-				if (satellite.printApogee && !DidApogee && MeanAnomaly > Math.PI) {
-					/* Calculate Apogee */
-					// TmpTime -= StepTime; /* So we pick up later where we left off */
-					MeanAnomaly = Math.PI;
-					CurrentTime = satellite.epochTime + (OrbitNum - ReferenceOrbit + 0.5) / AverageMotion;
-				}
-
-				TrueAnomaly = sun.Kepler(MeanAnomaly, satellite.eccentricity);
-
-				double SemiMajorAxis = 331.25 * Math.exp(2 * Math.log(Constants.MinutesPerDay / CurrentMotion) / 3);
-				satellite.calcPosVel(SemiMajorAxis, CurrentTime, TrueAnomaly);
-
-				site.calcPosVel(sun, CurrentTime, SiteMatrix);
-
-				bearing.calc(satellite, site, SiteMatrix);
-
-				if (bearing.elevation >= siteMinElev && CurrentTime >= startTime) {
-
-					Day = (int) (CurrentTime + Constants.HalfSecond);
-					if (((double) Day) > CurrentTime + Constants.HalfSecond)
-						Day -= 1; /* Correct for truncation of negative values */
-
-					if (OrbitNum == PrevOrbitNum && Day == PrevDay && !PrevVisible) {
-						N3mo.outPrintStream.println(); /* Dipped out of sight; print blank */
-					}
-					if (OrbitNum != PrevOrbitNum || Day != PrevDay) {
-						printHeader(Day, OrbitNum, flip, satellite.maxPhase);
-					}
-					PrevOrbitNum = OrbitNum;
-					PrevDay = Day;
-					frame.currentTime = CurrentTime + Constants.HalfSecond;
-					N3mo.outPrintStream.print(Constants.printTime(frame.currentTime));
-
-					frame.azimuth = bearing.azimuth * Constants.DegreesPerRadian;
-					frame.elevation = bearing.elevation * Constants.DegreesPerRadian;
-					N3mo.outPrintStream.print("  " + Math.round(frame.azimuth) + " " + Math.round(frame.elevation));
-					// calc flip
-					bearing.azimuth += Math.PI;
-					if (bearing.azimuth >= Math.PI * 2) {
-						bearing.azimuth -= Math.PI * 2;
-					}
-					bearing.elevation = Math.PI - bearing.elevation;
-					frame.azimuthFlip = bearing.azimuth * Constants.DegreesPerRadian;
-					frame.elevationFlip = bearing.elevation * Constants.DegreesPerRadian;
-					if (flip) {
-						N3mo.outPrintStream
-								.print("  " + Math.round(frame.azimuthFlip) + "  " + Math.round(frame.elevationFlip));
-					}
-
-					range.GetRange(site, satellite);
-
-					Doppler = -satellite.beaconFreq * range.rangeRate / Constants.C;
-					frame.doppler = Doppler;
-					frame.range = range.range;
-					N3mo.outPrintStream.print("  " + Math.round(frame.doppler) + " " + Math.round(frame.range));
-
-					double[] ssp = GetSubSatPoint(sun, satellite, CurrentTime);
-					frame.height = Math.round(ssp[2]);
-					frame.lat = Math.round(ssp[0] * Constants.DegreesPerRadian);
-					frame.lon = Math.round(ssp[1] * Constants.DegreesPerRadian);
-					N3mo.outPrintStream.print(" " + frame.height + "  " + frame.lat + "  " + frame.lon);
-
-					Phase = (int) (MeanAnomaly / (Math.PI * 2) * satellite.maxPhase + satellite.perigeePhase);
-					while (Phase < 0) {
-						Phase += satellite.maxPhase;
-					}
-					while (Phase >= satellite.maxPhase) {
-						Phase -= satellite.maxPhase;
-					}
-
-					frame.phase = Phase;
-					N3mo.outPrintStream.print(" " + Math.round(frame.phase) + "  ");
-					satellite.PrintMode(N3mo.outPrintStream, Phase, frame);
-
-					frame.apogee = (MeanAnomaly == Math.PI);
-					if (satellite.printApogee && frame.apogee) {
-						N3mo.outPrintStream.print("    Apogee");
-					}
-					frame.eclipsed = sun.Eclipsed(satellite, CurrentTime);
-					if (printEclipses && frame.eclipsed) {
-						N3mo.outPrintStream.print("  Eclipse");
-					}
-					N3mo.outPrintStream.println();
-					PrevVisible = true;
-					frames.add(frame);
-				} else {
-					PrevVisible = false;
-				}
-				if (satellite.printApogee && (MeanAnomaly == Math.PI)) {
-					DidApogee = true;
-				}
+			if (MeanAnomaly < Math.PI) {
+				DidApogee = false;
 			}
+			if (satellite.printApogee && !DidApogee && MeanAnomaly > Math.PI) {
+				/* Calculate Apogee */
+				MeanAnomaly = Math.PI;
+				currentTime = satellite.epochTime + (OrbitNum - ReferenceOrbit + 0.5) / AverageMotion;
+			}
+
+			TrueAnomaly = sun.Kepler(MeanAnomaly, satellite.eccentricity);
+
+			double SemiMajorAxis = 331.25 * Math.exp(2 * Math.log(Constants.MinutesPerDay / CurrentMotion) / 3);
+			satellite.calcPosVel(SemiMajorAxis, currentTime, TrueAnomaly);
+
+			site.calcPosVel(sun, currentTime, SiteMatrix);
+
+			bearing.calc(satellite, site, SiteMatrix);
+
+			if (bearing.elevation >= siteMinElev && currentTime >= startTime) {
+
+				Day = (int) (currentTime + Constants.HalfSecond);
+				if (((double) Day) > currentTime + Constants.HalfSecond)
+					Day -= 1; /* Correct for truncation of negative values */
+
+				if (OrbitNum == PrevOrbitNum && Day == PrevDay && !PrevVisible) {
+					N3mo.outPrintStream.println(); /* Dipped out of sight; print blank */
+				}
+				if (OrbitNum != PrevOrbitNum || Day != PrevDay) {
+					printHeader(Day, OrbitNum, flip, satellite.maxPhase);
+				}
+				PrevOrbitNum = OrbitNum;
+				PrevDay = Day;
+				frame.currentTime = currentTime + Constants.HalfSecond;
+				N3mo.outPrintStream.print(Constants.printTime(frame.currentTime));
+
+				frame.azimuth = bearing.azimuth * Constants.DegreesPerRadian;
+				frame.elevation = bearing.elevation * Constants.DegreesPerRadian;
+				N3mo.outPrintStream.print("  " + Math.round(frame.azimuth) + " " + Math.round(frame.elevation));
+				// calc flip
+				bearing.azimuth += Math.PI;
+				if (bearing.azimuth >= Math.PI * 2) {
+					bearing.azimuth -= Math.PI * 2;
+				}
+				bearing.elevation = Math.PI - bearing.elevation;
+				frame.azimuthFlip = bearing.azimuth * Constants.DegreesPerRadian;
+				frame.elevationFlip = bearing.elevation * Constants.DegreesPerRadian;
+				if (flip) {
+					N3mo.outPrintStream
+							.print("  " + Math.round(frame.azimuthFlip) + "  " + Math.round(frame.elevationFlip));
+				}
+
+				range.GetRange(site, satellite);
+
+				Doppler = -satellite.beaconFreq * range.rangeRate / Constants.C;
+				frame.doppler = Doppler;
+				frame.range = range.range;
+				N3mo.outPrintStream.print("  " + Math.round(frame.doppler) + " " + Math.round(frame.range));
+
+				double[] ssp = GetSubSatPoint(sun, satellite, currentTime);
+				frame.height = Math.round(ssp[2]);
+				frame.lat = Math.round(ssp[0] * Constants.DegreesPerRadian);
+				frame.lon = Math.round(ssp[1] * Constants.DegreesPerRadian);
+				N3mo.outPrintStream.print(" " + frame.height + "  " + frame.lat + "  " + frame.lon);
+
+				Phase = (int) (MeanAnomaly / (Math.PI * 2) * satellite.maxPhase + satellite.perigeePhase);
+				while (Phase < 0) {
+					Phase += satellite.maxPhase;
+				}
+				while (Phase >= satellite.maxPhase) {
+					Phase -= satellite.maxPhase;
+				}
+
+				frame.phase = Phase;
+				N3mo.outPrintStream.print(" " + Math.round(frame.phase) + "  ");
+				satellite.PrintMode(N3mo.outPrintStream, Phase, frame);
+
+				frame.apogee = (MeanAnomaly == Math.PI);
+				if (satellite.printApogee && frame.apogee) {
+					N3mo.outPrintStream.print("    Apogee");
+				}
+				frame.eclipsed = sun.Eclipsed(satellite, currentTime);
+				if (printEclipses && frame.eclipsed) {
+					N3mo.outPrintStream.print("  Eclipse");
+				}
+				N3mo.outPrintStream.println();
+				PrevVisible = true;
+				frames.add(frame);
+			} else {
+				PrevVisible = false;
+			}
+			if (satellite.printApogee && (MeanAnomaly == Math.PI)) {
+				DidApogee = true;
+			}
+		}
 		ObjectMapper mapper = new ObjectMapper();
 
 		// Object to JSON in file
@@ -260,11 +264,11 @@ public class Ephemeris {
 		return true;
 	}
 
-	private void printHeader(int Day, long OrbitNum, boolean flip, double maxPhase) {
+	private void printHeader(long Day, long OrbitNum, boolean flip, double maxPhase) {
 		/* Print Header */
 		N3mo.outPrintStream.print(Constants.DayNames[(int) (Day % 7)]);
 		N3mo.outPrintStream.print(" ");
-		int[] date = Constants.getDate(Day);
+		long[] date = Constants.getDate(Day);
 		N3mo.outPrintStream.print(date[2] + " " + date[1] + " " + date[0]);
 		N3mo.outPrintStream.println("  ----Orbit # " + OrbitNum + "-----");
 		N3mo.outPrintStream.print(" U.T.C.   Az  El  ");
@@ -379,6 +383,7 @@ public class Ephemeris {
 	public static Ephemeris getInstance() {
 		
 		Ephemeris ephemeris = null;
+		if (false) {
 		ObjectMapper mapper = new ObjectMapper();
 
 		// Object to JSON in file
@@ -394,7 +399,7 @@ public class Ephemeris {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
+		}
 		if (ephemeris == null) {
 			ephemeris = new Ephemeris(null,null);
 		}

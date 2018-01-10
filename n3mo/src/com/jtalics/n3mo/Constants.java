@@ -6,7 +6,6 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.List;
 import java.util.Scanner;
 
@@ -22,7 +21,7 @@ public class Constants {
 	static final double EarthEccentricity = 0.016713;
 	public static final double DegreesPerRadian = 180.0 / Math.PI;
 	public static final double RadiansPerDegree = Math.PI / 180.0;
-	static final String DayNames[] = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
+	static final String DayNames[] = {"Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"};
 	static final int MonthDays[] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 };
 	static String VersionStr = "N3EMO Orbit Simulator  v3.7";
 	static final double GM = 398600; /* Kilometers^3/seconds^2 G=Newton's universal gravitational constant, M is mass of earth */ 
@@ -45,8 +44,8 @@ public class Constants {
 	}
 
 	
-	public static int[] getDate(int DayNum) {
-/**
+	public static long[] getDate(long DayNum) {
+
 		int M, L;
 		long Y, retval[] = new long[3];
 
@@ -72,25 +71,29 @@ public class Constants {
 		retval[1] = M;
 		retval[2] = DayNum;
 		return retval;
-**/
+/*
 		ZonedDateTime plus = epoch1900.plusDays(DayNum);
 		int[] retval = new int[3];
 		retval[0] = plus.getYear();
 		retval[1] = plus.getMonthValue();
 		retval[2] = plus.getDayOfMonth();
 		return retval;
+*/
 	}
 
 	public static double getDurationInDaysSinceEpoch1900(int[] dateTime) {
+		
 		ZonedDateTime date = ZonedDateTime.of(dateTime[0], dateTime[1], dateTime[2], dateTime[3], dateTime[4], dateTime[5], dateTime[6], ZoneOffset.UTC);
-		return java.time.temporal.ChronoUnit.DAYS.between(epoch1900,date);
+		double days = java.time.temporal.ChronoUnit.NANOS.between(epoch1900,date)/(SecondsPerDay*1000000000.0);
+		return days;
 	}
 
-	
+
 	public static int[] getDateTime(double durationInDaysSince1900) {
-/**
+/*
 		int M, L;
-		long Y, retval[] = new long[3];
+		long Y;
+		long retval[] = new long[3];
 
 		Y = 4 * DayNum;
 		Y /= 1461;
@@ -114,8 +117,8 @@ public class Constants {
 		retval[1] = M;
 		retval[2] = DayNum;
 		return retval;
-**/
-		ZonedDateTime plus = epoch1900.plus((long)(durationInDaysSince1900*Constants.SecondsPerDay),ChronoUnit.SECONDS);
+*/
+		ZonedDateTime plus = epoch1900.plus((long) (durationInDaysSince1900*Constants.SecondsPerDay*1000000000.0),ChronoUnit.NANOS);
 		int[] retval = new int[7];
 		retval[0] = plus.getYear();
 		retval[1] = plus.getMonthValue();
@@ -127,25 +130,33 @@ public class Constants {
 		return retval;
 	}
 
-	/* get number of days since 1900 started, ignoring remainder */
-	static long getDayCountSince1900(int Year, int Month, int Day) {
 
-		ZonedDateTime date = ZonedDateTime.of(Year, Month, Day, 0, 0, 0, 0, ZoneOffset.UTC);
-		return java.time.temporal.ChronoUnit.DAYS.between(epoch1900,date);
-		/* Heuristic to allow 4 or 2 digit year specifications
+	/* Get the Day Number for a given date. January 1 of the reference year
+	   is day 0. Note that the Day Number may be negative, if the sidereal
+	   reference is in the future.  January 1, 1900 is day 0 */
+	static long getDayNumberSince1900(int Year, int Month, int Day) {
+
+		/* Heuristic to allow 4 or 2 digit year specifications*/
 		if (Year < 50) {
 			Year += 2000;
 		}
 		else if (Year < 100) {
 			Year += 1900;
 		}
-		long retval = ((((long) Year - 1901) * 1461) >> 2) + MonthDays[Month - 1] + Day + 365;
+		// N3EMO used Zero-based Day, Java uses One-based Day.
+		// Note that 1900 is NOT a leap year, thus use 1901 and add 365
+		long a = (((long) Year - 1901) * 1461) >> 2;
+		long retval = a + MonthDays[Month - 1] + Day + 365;
 		if (Year % 4 == 0 && Month > 2) {
 			retval++;
 		}
-
 		return retval;
-		*/
+/*
+		ZonedDateTime date = ZonedDateTime.of(Year, Month, Day, 0, 0, 0, 0, ZoneOffset.UTC);
+		long retval2=java.time.temporal.ChronoUnit.DAYS.between(epoch1900,date);
+		//if (retval!=retval2) throw new RuntimeException("retval="+retval+"!="+retval2);
+		return retval2;
+*/
 	}
 
 	static int letterNum(char c) throws Exception {
@@ -186,7 +197,7 @@ public class Constants {
 		String[] s = text.split(":");
 		String[] s2 = s[5].split("\\.");
 		int[] retval = new int[7];
-		for (int i=0; i<4; i++) {
+		for (int i=0; i<5; i++) {
 			retval[i]=Integer.parseInt(s[i]);
 		}
 		retval[5] = Integer.parseInt(s2[0]); // seconds
@@ -199,6 +210,12 @@ public class Constants {
 	public static String makeStandardDateTimeFormattedString(int[] dateTime) {
 		return dateTime[0] + ":" + dateTime[1] + ":" + dateTime[2] + ":" + dateTime[3] + ":" 
 				+ dateTime[4] + ":" + dateTime[5]+"."+dateTime[6]; // TODO fix nano
+	}
+
+	public static void main(String[] args) {
+		long dayNumber = getDayNumberSince1900(1900, 1, 1);
+		long[] date = getDate(dayNumber);
+		System.out.println(date[2] + " " +date[1]+ " " + date[0]);
 	}
 }
 
